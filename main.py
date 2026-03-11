@@ -47,11 +47,9 @@ def resolve_dlds(url):
         context = browser.new_context(accept_downloads=True)
         page = context.new_page()
         real = None
-
         def handler(download):
             nonlocal real
             real = download.url
-
         page.on("download", handler)
         try:
             page.goto(url)
@@ -96,10 +94,14 @@ def rename_file(path, comic, issue, year):
 
 def find_exact_issue(results, comic, issue):
     target = f"{comic} #{issue}".lower()
-    banned = ["vol", "collection", "omnibus", "tpb", "incursion", "special", "annual"]
+    banned = ["vol","collection","omnibus","tpb","incursion","special","annual","w.i.p"]
     for title, url in results:
         t = title.lower()
-        if target in t and not any(b in t for b in banned):
+        if any(b in t for b in banned):
+            continue
+        if not t.startswith(comic.lower()):
+            continue
+        if target in t:
             return url
     return None
 
@@ -256,7 +258,6 @@ def main():
             download_series(comic)
             continue
         download_issue(cmd)
-
 
 if __name__ == "__main__":
     main()
