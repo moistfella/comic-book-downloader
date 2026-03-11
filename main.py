@@ -16,14 +16,11 @@ os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 session = requests.Session()
 session.headers.update(HEADERS)
 
-
 def clear():
     os.system("cls" if os.name == "nt" else "clear")
 
-
 def clean(text):
     return re.sub(r"\s+", " ", text).strip()
-
 
 def search(query, page=1):
     url = f"{BASE_URL}/page/{page}/?s={quote_plus(query)}"
@@ -36,7 +33,6 @@ def search(query, page=1):
             results.append((clean(a.text), a["href"]))
     return results
 
-
 def get_download_link(post):
     r = session.get(post)
     soup = BeautifulSoup(r.text, "html.parser")
@@ -44,7 +40,6 @@ def get_download_link(post):
         if clean(a.text) == "DOWNLOAD NOW" and "/dlds/" in a["href"]:
             return a["href"]
     return None
-
 
 def resolve_dlds(url):
     with sync_playwright() as p:
@@ -65,7 +60,6 @@ def resolve_dlds(url):
             pass
         browser.close()
         return real
-
 
 def download(url):
     filename = unquote(url.split("/")[-1])
@@ -88,20 +82,17 @@ def download(url):
     print("\nSaved ->", path, "\n")
     return path
 
-
 def extract_year(filename):
     match = re.search(r"\((\d{4})\)", filename)
     if match:
         return match.group(1)
     return None
 
-
 def rename_file(path, comic, issue, year):
     new_name = f"{comic} #{issue} ({year}).cbz"
     new_path = os.path.join(DOWNLOAD_DIR, new_name)
     os.rename(path, new_path)
     return new_path
-
 
 def find_exact_issue(results, comic, issue):
     target = f"{comic} #{issue}".lower()
@@ -112,6 +103,13 @@ def find_exact_issue(results, comic, issue):
             return url
     return None
 
+def search_issue_pages(comic, issue, max_pages=5):
+    for page in range(1, max_pages + 1):
+        results = search(f"{comic} #{issue}", page)
+        post = find_exact_issue(results, comic, issue)
+        if post:
+            return post
+    return None
 
 def choose_result(query):
     page = 1
@@ -139,7 +137,6 @@ def choose_result(query):
             return results[index][1]
         except:
             pass
-
 
 def download_issue(query):
     post = choose_result(query)
@@ -183,7 +180,6 @@ def download_issue(query):
 
     input("Download complete. Press Enter...")
 
-
 def download_series(comic):
     rng = input("Issue range (example 1-10): ").strip()
     if "-" not in rng:
@@ -198,8 +194,7 @@ def download_series(comic):
 
     def resolver():
         for issue in range(start, end + 1):
-            results = search(f"{comic} #{issue}")
-            post = find_exact_issue(results, comic, issue)
+            post = search_issue_pages(comic, issue)
             if not post:
                 next_issue_queue.put((None, issue))
                 continue
@@ -245,7 +240,6 @@ def download_series(comic):
             issue_number += 1
 
     input("Series complete. Press Enter...")
-
 
 def main():
     while True:
