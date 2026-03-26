@@ -10,12 +10,11 @@ from playwright.sync_api import sync_playwright
 
 BASE_URL = "https://getcomics.org"
 HEADERS = {"User-Agent": "Mozilla/5.0"}
-
 DOWNLOAD_DIR = "downloads"
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
-if os.path.isfile("downloads/deleteme.txt"):
-    os.remove("downloads/deleteme.txt")
+if os.path.isfile(os.path.join(DOWNLOAD_DIR, "deleteme.txt")):
+    os.remove(os.path.join(DOWNLOAD_DIR, "deleteme.txt"))
 
 session = requests.Session()
 session.headers.update(HEADERS)
@@ -27,6 +26,86 @@ def clear():
 
 def clean(text):
     return re.sub(r"\s+", " ", text).strip()
+
+
+def normalize_comic_name(text):
+    return re.sub(r"[^a-z0-9]+", "", text.lower())
+
+
+def extract_year(filename):
+    match = re.search(r"\((\d{4})\)", filename)
+    if match:
+        return match.group(1)
+    return None
+
+
+def extract_year_from_text(text):
+    match = re.search(r"\((\d{4})\)", text)
+    return match.group(1) if match else None
+
+
+def parse_comic_filename(filename):
+    name = re.sub(r"\.(cbz|cbr)$", "", filename, flags=re.IGNORECASE)
+    year = extract_year(name)
+    name = re.sub(r"\s*\(\d{4}\)\s*", "", name).strip(" -_")
+    name = re.sub(r"[-_]", " ", name).strip()
+    name = re.sub(r"\s+", " ", name)
+    numbers = list(re.finditer(r"\b(\d+)\b", name))
+    if not numbers:
+        return None, None, None
+    last = numbers[-1]
+    issue = str(int(last.group(1)))
+    title = name[:last.start()].strip()
+    return title, issue, year or "Unknown"
+
+
+def build_indexes():
+    named_index = {}
+    raw_index = {}
+    for file in os.listdir(DOWNLOAD_DIR):
+        if not file.lower().endswith((".cbz", ".cbr")):
+            continue
+        path = os.path.join(DOWNLOAD_DIR, file)
+        raw_index[file.lower()] = path
+        comic, issue, _ = parse_comic_filename(file)
+        if comic and issue:
+            named_index[(normalize_comic_name(comic), str(issue))] = path
+    return named_index, raw_index
+
+
+def add_file_to_indexes(indexes, path):
+    named_index, raw_index = indexes
+    base = os.path.basename(path)
+    raw_index[base.lower()] = path
+    comic, issue, _ = parse_comic_filename(base)
+    if comic and issue:
+        named_index[(normalize_comic_name(comic), str(issue))] = path
+
+
+def remove_file_from_indexes(indexes, path):
+    named_index, raw_index = indexes
+    base = os.path.basename(path)
+    raw_index.pop(base.lower(), None)
+    comic, issue, _ = parse_comic_filename(base)
+    if comic and issue:
+        named_index.pop((normalize_comic_name(comic), str(issue)), None)
+
+
+def find_existing(indexes, raw_filename=None, comic=None, issue=None):
+    named_index, raw_index = indexes
+    if raw_filename:
+        raw_path = raw_index.get(raw_filename.lower())
+        if raw_path and os.path.exists(raw_path):
+            return raw_path
+        raw_path = os.path.join(DOWNLOAD_DIR, raw_filename)
+        if os.path.exists(raw_path):
+            return raw_path
+    if comic and issue:
+        key = (normalize_comic_name(comic), str(issue))
+        existing = named_index.get(key)
+        if existing and os.path.exists(existing):
+            return existing
+    return None
 
 
 def search(query, page=1):
@@ -93,13 +172,6 @@ def download(url):
     return path
 
 
-def extract_year(filename):
-    match = re.search(r"\((\d{4})\)", filename)
-    if match:
-        return match.group(1)
-    return None
-
-
 def rename_file(path, comic, issue, year):
     new_name = f"{comic} #{issue} ({year}).cbz"
     new_path = os.path.join(DOWNLOAD_DIR, new_name)
@@ -148,7 +220,7 @@ def choose_result(query):
         clear()
         if not results:
             print("No results found.")
-            return None
+            return None, None
         print(f"Results for '{query}' (page {page})\n")
         for i, (title, _) in enumerate(results[:10], 1):
             print(f"{i}. {title}")
@@ -161,16 +233,17 @@ def choose_result(query):
             page -= 1
             continue
         if choice == "b":
-            return None
+            return None, None
         try:
             index = int(choice) - 1
-            return results[index][1]
+            return results[index][0], results[index][1]
         except:
             pass
 
 
 def download_issue(query):
-    post = choose_result(query)
+    indexes = build_indexes()
+    selected_title, post = choose_result(query)
     if not post:
         return
     dlds = get_download_link(post)
@@ -188,37 +261,57 @@ def download_issue(query):
     threading.Thread(target=resolver, daemon=True).start()
 
     clear()
-    print(f"Downloading: {query}...\n")
+    print(f"Downloading: {selected_title}...\n")
 
     url = real_queue.get()
     if not url:
         print("Failed resolving download link.")
         input("Press Enter...")
         return
+
+    raw_filename = re.sub(r'[:*?"<>|]', "", unquote(url.split("/")[-1]))
+    if not raw_filename.endswith((".cbz", ".cbr")):
+        raw_filename += ".cbz"
+    parsed_comic, parsed_issue, _ = parse_comic_filename(raw_filename)
+
+    print("Checking existing files...\n")
+    existing = find_existing(indexes, raw_filename=raw_filename, comic=parsed_comic, issue=parsed_issue)
+    if existing:
+        print(f"Found: {os.path.basename(existing)}")
+        input("\nPress Enter...")
+        clear()
+        return
+
+    clear()
     path = download(url)
+    add_file_to_indexes(indexes, path)
 
     clear()
     print(f"Downloaded {os.path.basename(path)}\n")
 
     rename = input("Rename downloaded file? (y/n): ").lower()
     if rename == "y":
-        issue_match = re.search(r"#(\d+)", query)
-        issue = issue_match.group(1) if issue_match else "1"
-        comic = query.split("#")[0].strip()
-        year = extract_year(os.path.basename(path)) or "Unknown"
-        path = rename_file(path, comic, issue, year)
+        comic, issue, year = parse_comic_filename(os.path.basename(path))
+        if year == "Unknown":
+            title_year = extract_year_from_text(selected_title)
+            if title_year:
+                year = title_year
+        if comic:
+            remove_file_from_indexes(indexes, path)
+            path = rename_file(path, comic, issue, year)
+            add_file_to_indexes(indexes, path)
 
     input("\nDownload complete.\n\nPress Enter...")
 
 
 def download_series(comic):
+    indexes = build_indexes()
     rng = input("Issue range (example 1-10): ").strip()
     if not re.fullmatch(r"[0-9]+-[0-9]+", rng):
         print("Invalid range.")
         input("Press Enter...")
         return
     start, end = map(int, rng.split("-"))
-
     if start > end:
         print("Start issue cannot be greater than end issue.")
         input("Press Enter...")
@@ -227,34 +320,64 @@ def download_series(comic):
     next_issue_queue = Queue(maxsize=1)
     downloaded_files = []
     last_year = None
+    existing_files = []
 
     def resolver():
         for issue in range(start, end + 1):
+            existing = find_existing(indexes, comic=comic, issue=issue)
+            if existing:
+                existing_files.append((issue, existing))
+                next_issue_queue.put(("EXISTS", issue, existing))
+                continue
             post = search_issue_pages(comic, issue)
             if not post:
-                next_issue_queue.put((None, issue))
+                next_issue_queue.put((None, issue, None))
                 continue
             dlds = get_download_link(post)
             if not dlds:
-                next_issue_queue.put((None, issue))
+                next_issue_queue.put((None, issue, None))
                 continue
             real = resolve_dlds(dlds)
-            next_issue_queue.put((real, issue))
+            if not real:
+                next_issue_queue.put((None, issue, None))
+                continue
+            raw_filename = re.sub(r'[:*?"<>|]', "", unquote(real.split("/")[-1]))
+            if not raw_filename.endswith((".cbz", ".cbr")):
+                raw_filename += ".cbz"
+            parsed_comic, parsed_issue, _ = parse_comic_filename(raw_filename)
+            existing = find_existing(indexes, raw_filename=raw_filename, comic=parsed_comic, issue=parsed_issue)
+            if existing:
+                existing_files.append((issue, existing))
+                next_issue_queue.put(("EXISTS", issue, existing))
+                continue
+            next_issue_queue.put((real, issue, None))
 
     threading.Thread(target=resolver, daemon=True).start()
 
     for _ in range(start, end + 1):
-        url, issue = next_issue_queue.get()
+        url, issue, extra = next_issue_queue.get()
+
+        if url == "EXISTS":
+            clear()
+            print("Already downloaded:\n")
+            for i, (iss, path) in enumerate(existing_files, 1):
+                print(f"{i}. Issue #{iss} - {os.path.basename(path)}")
+            continue
+
         clear()
         print("Downloaded Issues:")
         for i, path in enumerate(downloaded_files, start=1):
             print(f"{i}. {os.path.basename(path)}")
+
         if not url:
-            print(f"Issue #{issue} not found or failed to resolve.\n")
+            print(f"\nIssue #{issue} not found or failed to resolve.\n")
             continue
+
         print(f"\nDownloading issue #{issue}...")
         path = download(url)
         downloaded_files.append(path)
+        add_file_to_indexes(indexes, path)
+
         year = extract_year(os.path.basename(path))
         if year:
             last_year = year
@@ -264,18 +387,23 @@ def download_series(comic):
         print("No issues downloaded.")
         input("Press Enter...")
         return
+
     print("All downloaded issues:")
     for i, path in enumerate(downloaded_files, start=1):
         print(f"{i}. {os.path.basename(path)}")
 
     rename = input("\nRename all downloaded files? (y/n): ").lower()
     if rename == "y":
-        issue_number = start
-        for path in downloaded_files:
-            year = extract_year(os.path.basename(path)) or last_year or "Unknown"
-            new_path = rename_file(path, comic, issue_number, year)
-            downloaded_files[issue_number - start] = new_path
-            issue_number += 1
+        for i, path in enumerate(downloaded_files):
+            comic_name, issue_num, year = parse_comic_filename(os.path.basename(path))
+            if year == "Unknown":
+                title_year = extract_year_from_text(os.path.basename(path))
+                year = title_year or last_year or "Unknown"
+            if comic_name:
+                remove_file_from_indexes(indexes, path)
+                new_path = rename_file(path, comic_name, issue_num, year)
+                downloaded_files[i] = new_path
+                add_file_to_indexes(indexes, new_path)
 
     input("\nSeries complete.\n\nPress Enter...")
 
@@ -285,9 +413,7 @@ def main():
         while True:
             clear()
             print("Welcome\nPress Ctrl+C at any time to exit")
-            option = input(
-                "\nWhat are you looking for?\n1. Search comic\n2. Search Series\n\nChoice (1/2): "
-            ).strip()
+            option = input("\nWhat are you looking for?\n1. Search comic\n2. Search Series\n\nChoice (1/2): ").strip()
             if not option or option not in ("1", "2"):
                 print("Invalid choice. Must be either option 1 or 2.")
                 input("Press Enter to continue...")
