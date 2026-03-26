@@ -1,4 +1,5 @@
 import os
+import subprocess
 import re
 import threading
 from queue import Queue
@@ -13,14 +14,20 @@ HEADERS = {"User-Agent": "Mozilla/5.0"}
 DOWNLOAD_DIR = "downloads"
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
+if os.path.isfile("downloads/deleteme.txt"):
+    os.remove("downloads/deleteme.txt")
+
 session = requests.Session()
 session.headers.update(HEADERS)
 
+
 def clear():
-    os.system("cls" if os.name == "nt" else "clear")
+    subprocess.run("cls" if os.name == "nt" else "clear")
+
 
 def clean(text):
     return re.sub(r"\s+", " ", text).strip()
+
 
 def search(query, page=1):
     url = f"{BASE_URL}/page/{page}/?s={quote_plus(query)}"
@@ -33,6 +40,7 @@ def search(query, page=1):
             results.append((clean(a.text), a["href"]))
     return results
 
+
 def get_download_link(post):
     r = session.get(post)
     soup = BeautifulSoup(r.text, "html.parser")
@@ -41,15 +49,18 @@ def get_download_link(post):
             return a["href"]
     return None
 
+
 def resolve_dlds(url):
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         context = browser.new_context(accept_downloads=True)
         page = context.new_page()
         real = None
+
         def handler(download):
             nonlocal real
             real = download.url
+
         page.on("download", handler)
         try:
             page.goto(url)
@@ -58,6 +69,7 @@ def resolve_dlds(url):
             pass
         browser.close()
         return real
+
 
 def download(url):
     filename = unquote(url.split("/")[-1])
@@ -80,11 +92,13 @@ def download(url):
     print("\nSaved ->", path, "\n")
     return path
 
+
 def extract_year(filename):
     match = re.search(r"\((\d{4})\)", filename)
     if match:
         return match.group(1)
     return None
+
 
 def rename_file(path, comic, issue, year):
     new_name = f"{comic} #{issue} ({year}).cbz"
@@ -92,9 +106,19 @@ def rename_file(path, comic, issue, year):
     os.rename(path, new_path)
     return new_path
 
+
 def find_exact_issue(results, comic, issue):
     target = f"{comic} #{issue}".lower()
-    banned = ["vol","collection","omnibus","tpb","incursion","special","annual","w.i.p"]
+    banned = [
+        "vol",
+        "collection",
+        "omnibus",
+        "tpb",
+        "incursion",
+        "special",
+        "annual",
+        "w.i.p",
+    ]
     for title, url in results:
         t = title.lower()
         if any(b in t for b in banned):
@@ -105,6 +129,7 @@ def find_exact_issue(results, comic, issue):
             return url
     return None
 
+
 def search_issue_pages(comic, issue, max_pages=5):
     for page in range(1, max_pages + 1):
         results = search(f"{comic} #{issue}", page)
@@ -113,11 +138,14 @@ def search_issue_pages(comic, issue, max_pages=5):
             return post
     return None
 
+
 def choose_result(query):
     page = 1
     while True:
         clear()
+        print("Loading results...")
         results = search(query, page)
+        clear()
         if not results:
             print("No results found.")
             return None
@@ -140,6 +168,7 @@ def choose_result(query):
         except:
             pass
 
+
 def download_issue(query):
     post = choose_result(query)
     if not post:
@@ -151,14 +180,14 @@ def download_issue(query):
         return
 
     real_queue = Queue(maxsize=1)
+
     def resolver():
         real_url = resolve_dlds(dlds)
         real_queue.put(real_url)
+
     threading.Thread(target=resolver, daemon=True).start()
 
     clear()
-    print("Downloaded Issues:\n")
-    print("<No issues downloaded yet>\n")
     print(f"Downloading: {query}...\n")
 
     url = real_queue.get()
@@ -169,8 +198,7 @@ def download_issue(query):
     path = download(url)
 
     clear()
-    print("Downloaded Issues:\n")
-    print(f"1. {os.path.basename(path)}\n")
+    print(f"Downloaded {os.path.basename(path)}\n")
 
     rename = input("Rename downloaded file? (y/n): ").lower()
     if rename == "y":
@@ -182,13 +210,19 @@ def download_issue(query):
 
     input("Download complete. Press Enter...")
 
+
 def download_series(comic):
     rng = input("Issue range (example 1-10): ").strip()
-    if "-" not in rng:
+    if not re.fullmatch(r"[0-9]+-[0-9]+", rng):
         print("Invalid range.")
         input("Press Enter...")
         return
     start, end = map(int, rng.split("-"))
+
+    if start > end:
+        print("Start issue cannot be greater than end issue.")
+        input("Press Enter...")
+        return
 
     next_issue_queue = Queue(maxsize=1)
     downloaded_files = []
@@ -214,8 +248,7 @@ def download_series(comic):
         clear()
         print("Downloaded Issues:")
         for i, path in enumerate(downloaded_files, start=1):
-            print(f"{i}. {os.path.basename(path)}")
-        print()
+            print(f"{i}. {os.path.basename(path)}\n")
         if not url:
             print(f"Issue #{issue} not found or failed to resolve.\n")
             continue
@@ -227,10 +260,13 @@ def download_series(comic):
             last_year = year
 
     clear()
+    if len(downloaded_files) == 0:
+        print("No issues downloaded.")
+        input("Press Enter...")
+        return
     print("All downloaded issues:")
     for i, path in enumerate(downloaded_files, start=1):
-        print(f"{i}. {os.path.basename(path)}")
-    print()
+        print(f"{i}. {os.path.basename(path)}\n")
 
     rename = input("Rename all downloaded files? (y/n): ").lower()
     if rename == "y":
@@ -243,21 +279,30 @@ def download_series(comic):
 
     input("Series complete. Press Enter...")
 
+
 def main():
-    while True:
-        clear()
-        cmd = input("Search comic (or /series <name>, exit): ").strip()
-        if cmd.lower() == "exit":
-            break
-        if cmd.startswith("/series"):
-            comic = cmd.replace("/series", "").strip()
-            if not comic:
-                print("Usage: /series <comic name>")
-                input("Press Enter...")
+    try:
+        while True:
+            clear()
+            print("Welcome\nPress Ctrl+C at any time to exit")
+            option = input(
+                "\nWhat are you looking for?\n1. Search comic\n2. Search Series\nChoice (1/2): "
+            ).strip()
+            if not option or option not in ("1", "2"):
+                print("Invalid choice. Must be either option 1 or 2.")
+                input("Press Enter to continue...")
                 continue
-            download_series(comic)
-            continue
-        download_issue(cmd)
+            if option == "1":
+                comic = input("What is the name of the comic you want to download?: ")
+                download_issue(comic)
+            elif option == "2":
+                comic = input(
+                    "What is the name of the comic series you want to download?: "
+                )
+                download_series(comic)
+    except KeyboardInterrupt:
+        print("\nExiting...")
+
 
 if __name__ == "__main__":
     main()
