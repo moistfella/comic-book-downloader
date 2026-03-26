@@ -22,7 +22,7 @@ session.headers.update(HEADERS)
 
 
 def clear():
-    subprocess.run("cls" if os.name == "nt" else "clear")
+    subprocess.run("cls" if os.name == "nt" else "clear", shell=True)
 
 
 def clean(text):
@@ -208,7 +208,7 @@ def download_issue(query):
         year = extract_year(os.path.basename(path)) or "Unknown"
         path = rename_file(path, comic, issue, year)
 
-    input("Download complete. Press Enter...")
+    input("\nDownload complete.\n\nPress Enter...")
 
 
 def download_series(comic):
@@ -248,11 +248,11 @@ def download_series(comic):
         clear()
         print("Downloaded Issues:")
         for i, path in enumerate(downloaded_files, start=1):
-            print(f"{i}. {os.path.basename(path)}\n")
+            print(f"{i}. {os.path.basename(path)}")
         if not url:
             print(f"Issue #{issue} not found or failed to resolve.\n")
             continue
-        print(f"Downloading issue #{issue}...")
+        print(f"\nDownloading issue #{issue}...")
         path = download(url)
         downloaded_files.append(path)
         year = extract_year(os.path.basename(path))
@@ -266,9 +266,9 @@ def download_series(comic):
         return
     print("All downloaded issues:")
     for i, path in enumerate(downloaded_files, start=1):
-        print(f"{i}. {os.path.basename(path)}\n")
+        print(f"{i}. {os.path.basename(path)}")
 
-    rename = input("Rename all downloaded files? (y/n): ").lower()
+    rename = input("\nRename all downloaded files? (y/n): ").lower()
     if rename == "y":
         issue_number = start
         for path in downloaded_files:
@@ -277,7 +277,7 @@ def download_series(comic):
             downloaded_files[issue_number - start] = new_path
             issue_number += 1
 
-    input("Series complete. Press Enter...")
+    input("\nSeries complete.\n\nPress Enter...")
 
 
 def main():
@@ -286,22 +286,20 @@ def main():
             clear()
             print("Welcome\nPress Ctrl+C at any time to exit")
             option = input(
-                "\nWhat are you looking for?\n1. Search comic\n2. Search Series\nChoice (1/2): "
+                "\nWhat are you looking for?\n1. Search comic\n2. Search Series\n\nChoice (1/2): "
             ).strip()
             if not option or option not in ("1", "2"):
                 print("Invalid choice. Must be either option 1 or 2.")
                 input("Press Enter to continue...")
                 continue
             if option == "1":
-                comic = input("What is the name of the comic you want to download?: ")
+                comic = input("\nWhat is the name of the comic you want to download?: ")
                 download_issue(comic)
             elif option == "2":
-                comic = input(
-                    "What is the name of the comic series you want to download?: "
-                )
+                comic = input("\nWhat is the name of the comic series you want to download?: ")
                 download_series(comic)
     except KeyboardInterrupt:
-        print("\nExiting...")
+        print("\n\nExiting...")
 
 
 if __name__ == "__main__":
