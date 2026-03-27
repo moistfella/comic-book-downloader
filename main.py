@@ -55,7 +55,7 @@ def parse_comic_filename(filename):
         return None, None, None
     last = numbers[-1]
     issue = str(int(last.group(1)))
-    title = name[:last.start()].strip()
+    title = name[: last.start()].strip()
     return title, issue, year or "Unknown"
 
 
@@ -275,7 +275,9 @@ def download_issue(query):
     parsed_comic, parsed_issue, _ = parse_comic_filename(raw_filename)
 
     print("Checking existing files...\n")
-    existing = find_existing(indexes, raw_filename=raw_filename, comic=parsed_comic, issue=parsed_issue)
+    existing = find_existing(
+        indexes, raw_filename=raw_filename, comic=parsed_comic, issue=parsed_issue
+    )
     if existing:
         print(f"Found: {os.path.basename(existing)}")
         input("\nPress Enter...")
@@ -345,7 +347,12 @@ def download_series(comic):
             if not raw_filename.endswith((".cbz", ".cbr")):
                 raw_filename += ".cbz"
             parsed_comic, parsed_issue, _ = parse_comic_filename(raw_filename)
-            existing = find_existing(indexes, raw_filename=raw_filename, comic=parsed_comic, issue=parsed_issue)
+            existing = find_existing(
+                indexes,
+                raw_filename=raw_filename,
+                comic=parsed_comic,
+                issue=parsed_issue,
+            )
             if existing:
                 existing_files.append((issue, existing))
                 next_issue_queue.put(("EXISTS", issue, existing))
@@ -413,7 +420,9 @@ def main():
         while True:
             clear()
             print("Welcome\nPress Ctrl+C at any time to exit")
-            option = input("\nWhat are you looking for?\n1. Search comic\n2. Search Series\n\nChoice (1/2): ").strip()
+            option = input(
+                "\nWhat are you looking for?\n1. Search comic\n2. Search Series\n\nChoice (1/2): "
+            ).strip()
             if not option or option not in ("1", "2"):
                 print("Invalid choice. Must be either option 1 or 2.")
                 input("Press Enter to continue...")
@@ -422,7 +431,9 @@ def main():
                 comic = input("\nWhat is the name of the comic you want to download?: ")
                 download_issue(comic)
             elif option == "2":
-                comic = input("\nWhat is the name of the comic series you want to download?: ")
+                comic = input(
+                    "\nWhat is the name of the comic series you want to download?: "
+                )
                 download_series(comic)
     except KeyboardInterrupt:
         print("\n\nExiting...")
