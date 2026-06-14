@@ -124,8 +124,11 @@ def get_download_link(post):
     r = session.get(post)
     soup = BeautifulSoup(r.text, "html.parser")
     for a in soup.find_all("a", href=True):
-        if clean(a.text) == "DOWNLOAD NOW" and "/dlds/" in a["href"]:
-            return a["href"]
+        href = a["href"]
+        if clean(a.text).upper() == "DOWNLOAD NOW" and (
+            "/dls/" in href or "/dlds/" in href
+        ):
+            return href
     return None
 
 
@@ -179,8 +182,12 @@ def rename_file(path, comic, issue, year):
     return new_path
 
 
-def find_exact_issue(results, comic, issue):
-    target = f"{comic} #{issue}".lower()
+def match_title_to_issue(title, comic, issue):
+    clean_comic = re.sub(r"^the\s+", "", comic.lower().strip())
+    escaped_comic = re.escape(clean_comic)
+    target_issue = str(int(issue))
+    pattern = rf"\b(?:the\s+)?{escaped_comic}\b\s*(?:#|–|-|_)?\s*0*{target_issue}\b"
+
     banned = [
         "vol",
         "collection",
@@ -191,13 +198,18 @@ def find_exact_issue(results, comic, issue):
         "annual",
         "w.i.p",
     ]
+
+    t = title.lower()
+    if any(b in t for b in banned):
+        return False
+    if re.search(pattern, t):
+        return True
+    return False
+
+
+def find_exact_issue(results, comic, issue):
     for title, url in results:
-        t = title.lower()
-        if any(b in t for b in banned):
-            continue
-        if not t.startswith(comic.lower()):
-            continue
-        if target in t:
+        if match_title_to_issue(title, comic, issue):
             return url
     return None
 
@@ -325,13 +337,36 @@ def download_series(comic):
     existing_files = []
 
     def resolver():
+        needed_issues = []
+        for issue in range(start, end + 1):
+            existing = find_existing(indexes, comic=comic, issue=issue)
+            if not existing:
+                needed_issues.append(issue)
+
+        resolved_posts = {}
+        if needed_issues:
+            max_pages = 15
+            for page in range(1, max_pages + 1):
+                unresolved = [i for i in needed_issues if i not in resolved_posts]
+                if not unresolved:
+                    break
+                results = search(comic, page)
+                if not results:
+                    break
+                for title, url in results:
+                    for issue in list(unresolved):
+                        if match_title_to_issue(title, comic, issue):
+                            resolved_posts[issue] = url
+                            unresolved.remove(issue)
+                            break
+
         for issue in range(start, end + 1):
             existing = find_existing(indexes, comic=comic, issue=issue)
             if existing:
                 existing_files.append((issue, existing))
                 next_issue_queue.put(("EXISTS", issue, existing))
                 continue
-            post = search_issue_pages(comic, issue)
+            post = resolved_posts.get(issue)
             if not post:
                 next_issue_queue.put((None, issue, None))
                 continue
