@@ -120,16 +120,20 @@ def search(query, page=1):
     return results
 
 
-def get_download_link(post):
+def get_download_links(post):
     r = session.get(post)
     soup = BeautifulSoup(r.text, "html.parser")
+    primary_links = []
+    mirror_links = []
     for a in soup.find_all("a", href=True):
         href = a["href"]
-        if clean(a.text).upper() == "DOWNLOAD NOW" and (
-            "/dls/" in href or "/dlds/" in href
-        ):
-            return href
-    return None
+        text = clean(a.text).upper()
+        if "/dls/" in href or "/dlds/" in href:
+            if any(m in text for m in ("PIXELDRAIN", "MEDIAFIRE", "ZIPPYSHARE")):
+                mirror_links.append(href)
+            elif text in ("DOWNLOAD NOW", "DIRECT DOWNLOAD"):
+                primary_links.append(href)
+    return mirror_links + primary_links
 
 
 def resolve_dlds(url):
@@ -146,7 +150,16 @@ def resolve_dlds(url):
         page.on("download", handler)
         try:
             page.goto(url)
-            page.wait_for_timeout(4000)
+            for _ in range(12):
+                if real:
+                    break
+                if "pixeldrain.com/u/" in page.url:
+                    file_id = page.url.split("/")[-1]
+                    real = f"https://pixeldrain.com/api/file/{file_id}"
+                    break
+                page.wait_for_timeout(500)
+            else:
+                page.wait_for_timeout(1000)
         except:
             pass
         browser.close()
@@ -154,23 +167,39 @@ def resolve_dlds(url):
 
 
 def download(url):
-    filename = unquote(url.split("/")[-1])
+    r = session.get(url, stream=True)
+
+    filename = None
+    cd = r.headers.get("content-disposition")
+    if cd:
+        match = re.search(r'filename="([^"]+)"', cd)
+        if match:
+            filename = unquote(match.group(1))
+
+    if not filename:
+        filename = unquote(url.split("/")[-1])
+
     filename = re.sub(r'[:*?"<>|]', "", filename)
     if not filename.endswith((".cbz", ".cbr")):
         filename += ".cbz"
+
     path = os.path.join(DOWNLOAD_DIR, filename)
-    r = session.get(url, stream=True)
     total = int(r.headers.get("content-length", 0))
     done = 0
+    last_percent = -1
     print(f"Downloading: {filename}")
+
     with open(path, "wb") as f:
-        for chunk in r.iter_content(8192):
+        for chunk in r.iter_content(1024 * 256):
             if chunk:
                 f.write(chunk)
                 done += len(chunk)
                 if total:
                     percent = int(done * 100 / total)
-                    print(f"\r{percent}% ", end="")
+                    if percent != last_percent:
+                        print(f"\r{percent}% ", end="")
+                        last_percent = percent
+
     print("\nSaved ->", path, "\n")
     return path
 
@@ -258,8 +287,8 @@ def download_issue(query):
     selected_title, post = choose_result(query)
     if not post:
         return
-    dlds = get_download_link(post)
-    if not dlds:
+    dlds_list = get_download_links(post)
+    if not dlds_list:
         print("No download link.")
         input("Press Enter...")
         return
@@ -267,7 +296,11 @@ def download_issue(query):
     real_queue = Queue(maxsize=1)
 
     def resolver():
-        real_url = resolve_dlds(dlds)
+        real_url = None
+        for dlds in dlds_list:
+            real_url = resolve_dlds(dlds)
+            if real_url:
+                break
         real_queue.put(real_url)
 
     threading.Thread(target=resolver, daemon=True).start()
@@ -370,11 +403,12 @@ def download_series(comic):
             if not post:
                 next_issue_queue.put((None, issue, None))
                 continue
-            dlds = get_download_link(post)
-            if not dlds:
-                next_issue_queue.put((None, issue, None))
-                continue
-            real = resolve_dlds(dlds)
+            dlds_list = get_download_links(post)
+            real = None
+            for dlds in dlds_list:
+                real = resolve_dlds(dlds)
+                if real:
+                    break
             if not real:
                 next_issue_queue.put((None, issue, None))
                 continue
