@@ -211,6 +211,28 @@ def rename_file(path, comic, issue, year):
     return new_path
 
 
+def parse_volume_filename(filename):
+    name = re.sub(r"\.(cbz|cbr)$", "", filename, flags=re.IGNORECASE)
+    year = extract_year(name) or "Unknown"
+    vol_match = re.search(r"\b(vol|v|volume)\.?\s*0*(\d+)\b", name, re.IGNORECASE)
+    if not vol_match:
+        return None
+    vol_num = str(int(vol_match.group(2)))
+    series_raw = name[: vol_match.start()].strip()
+    series = re.sub(r"\s+", " ", series_raw).strip(" -_:")
+    post_raw = name[vol_match.end() :].strip()
+    post_clean = re.sub(r"\s*\([^)]*\)\s*", " ", post_raw).strip()
+    subtitle = re.sub(r"^[^\w]+", "", post_clean).strip()
+    subtitle = re.sub(r"\b(tpb)\b", "", subtitle, flags=re.IGNORECASE).strip(" -_:")
+    return series, vol_num, re.sub(r"\s+", " ", subtitle), year
+
+
+def format_volume_name(series, vol_num, subtitle, year):
+    if subtitle:
+        return f"{series} Vol. {vol_num} - {subtitle} ({year}).cbz"
+    return f"{series} Vol. {vol_num} ({year}).cbz"
+
+
 def match_title_to_issue(title, comic, issue):
     clean_comic = re.sub(r"^the\s+", "", comic.lower().strip())
     escaped_comic = re.escape(clean_comic)
@@ -338,15 +360,25 @@ def download_issue(query):
 
     rename = input("Rename downloaded file? (y/n): ").lower()
     if rename == "y":
-        comic, issue, year = parse_comic_filename(os.path.basename(path))
-        if year == "Unknown":
-            title_year = extract_year_from_text(selected_title)
-            if title_year:
-                year = title_year
-        if comic:
+        parsed_vol = parse_volume_filename(os.path.basename(path))
+        if parsed_vol:
+            series, vol_num, subtitle, year = parsed_vol
+            if year == "Unknown":
+                year = extract_year_from_text(selected_title) or "Unknown"
+            new_name = format_volume_name(series, vol_num, subtitle, year)
+            new_path = os.path.join(DOWNLOAD_DIR, new_name)
             remove_file_from_indexes(indexes, path)
-            path = rename_file(path, comic, issue, year)
+            os.rename(path, new_path)
+            path = new_path
             add_file_to_indexes(indexes, path)
+        else:
+            comic, issue, year = parse_comic_filename(os.path.basename(path))
+            if year == "Unknown":
+                year = extract_year_from_text(selected_title) or "Unknown"
+            if comic:
+                remove_file_from_indexes(indexes, path)
+                path = rename_file(path, comic, issue, year)
+                add_file_to_indexes(indexes, path)
 
     input("\nDownload complete.\n\nPress Enter...")
 
@@ -471,15 +503,36 @@ def download_series(comic):
     rename = input("\nRename all downloaded files? (y/n): ").lower()
     if rename == "y":
         for i, path in enumerate(downloaded_files):
-            comic_name, issue_num, year = parse_comic_filename(os.path.basename(path))
-            if year == "Unknown":
-                title_year = extract_year_from_text(os.path.basename(path))
-                year = title_year or last_year or "Unknown"
-            if comic_name:
+            parsed_vol = parse_volume_filename(os.path.basename(path))
+            if parsed_vol:
+                series, vol_num, subtitle, year = parsed_vol
+                if year == "Unknown":
+                    year = (
+                        extract_year_from_text(os.path.basename(path))
+                        or last_year
+                        or "Unknown"
+                    )
+                new_name = format_volume_name(series, vol_num, subtitle, year)
+                new_path = os.path.join(DOWNLOAD_DIR, new_name)
                 remove_file_from_indexes(indexes, path)
-                new_path = rename_file(path, comic_name, issue_num, year)
+                os.rename(path, new_path)
                 downloaded_files[i] = new_path
                 add_file_to_indexes(indexes, new_path)
+            else:
+                comic_name, issue_num, year = parse_comic_filename(
+                    os.path.basename(path)
+                )
+                if year == "Unknown":
+                    year = (
+                        extract_year_from_text(os.path.basename(path))
+                        or last_year
+                        or "Unknown"
+                    )
+                if comic_name:
+                    remove_file_from_indexes(indexes, path)
+                    new_path = rename_file(path, comic_name, issue_num, year)
+                    downloaded_files[i] = new_path
+                    add_file_to_indexes(indexes, new_path)
 
     input("\nSeries complete.\n\nPress Enter...")
 
