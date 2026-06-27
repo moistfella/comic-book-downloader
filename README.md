@@ -57,7 +57,7 @@ graph TD
 
 ## 📋 Requirements
 
-*   **Python:** Version `3.10` or higher is recommended.
+*   **Python:** Version `3.10` or higher is recommended (Download latest version [here](https://www.python.org/downloads/)).
 *   **Playwright:** Required for headless browser scraping to bypass JS download redirects.
 *   **Active Internet Connection**
 
