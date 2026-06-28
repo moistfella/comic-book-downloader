@@ -133,7 +133,7 @@ Upon launching, the interactive menu will prompt you for an option:
 
 #### 🔹 Series Download
 1. Enter `2` at the prompt.
-2. Enter the name of the comic series (e.g., `Ultimate Spider-Man`).
+2. Enter the name of the comic series (e.g., `Ultimate Spider-Man`) and select the series from the search results.
 3. Define the range when prompted (e.g., `1-10`).
 4. The tool will automatically look up, match, and download the selected range.
 
