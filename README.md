@@ -93,35 +93,23 @@ Choose the installation instructions corresponding to your operating system belo
 
 ### 🐧 Linux Setup
 
-1. **Clone & Enter Directory:**
+1. **Clone the Repository:**
    ```bash
    git clone https://github.com/moistfella/comic-book-downloader.git
    cd comic-book-downloader
    ```
 
-2. **Create a Virtual Environment:**
+2. **Run the Installer:**
+   Grant execute permissions and run the install script from the terminal:
    ```bash
-   python -m venv venv
+   chmod +x install.sh run.sh
+   ./install.sh
    ```
+   > `install.sh` automatically creates a Python virtual environment (`env`), activates it, installs the required dependencies (`requests`, `beautifulsoup4`, `playwright`), and initializes the Playwright browser binaries.
 
-3. **Activate the Environment:**
+3. **Launch the Application:**
    ```bash
-   source venv/bin/activate
-   ```
-
-4. **Install Dependencies:**
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-5. **Install Playwright Browsers:**
-   ```bash
-   python -m playwright install
-   ```
-
-6. **Run the Downloader:**
-   ```bash
-   python main.py
+   ./run.sh
    ```
 
 ---
