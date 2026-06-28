@@ -4,7 +4,9 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux-lightgrey.svg)]()
 
-A terminal-based Python tool to search, download, and automatically rename comics from [GetComics.org](https://getcomics.org). Supports single-issue downloads and automated series run downloads.
+A terminal-based Python tool to search, download, and automatically rename comics from [GetComics.org](https://getcomics.org). 
+
+Supports single-issue downloads and automated series run downloads.
 
 ---
 
