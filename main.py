@@ -184,9 +184,111 @@ def download_issue(query):
     input("\nDownload complete.\n\nPress Enter...")
 
 
-def download_series(comic):
+def download_series(query):
     indexes = build_indexes()
-    rng = input("Issue range (example 1-10): ").strip()
+    clear()
+    print("Searching and grouping series...")
+
+    series_groups = {}
+    for page in range(1, 7):
+        results = downloader.search(query, page)
+        if not results:
+            break
+        for title, url in results:
+            parsed_vol = utils.parse_volume_filename(title)
+            if parsed_vol:
+                series, vol_num, subtitle, year = parsed_vol
+                norm = utils.normalize_comic_name(series)
+                if norm not in series_groups:
+                    series_groups[norm] = {
+                        "name": series,
+                        "issues": {},
+                        "vols": {},
+                        "urls": {},
+                    }
+                series_groups[norm]["vols"][
+                    int(vol_num) if vol_num.isdigit() else vol_num
+                ] = year
+                series_groups[norm]["urls"][f"V{vol_num}"] = url
+            else:
+                comic, issue, year = utils.parse_comic_filename(title)
+                if comic and issue:
+                    norm = utils.normalize_comic_name(comic)
+                    if norm not in series_groups:
+                        series_groups[norm] = {
+                            "name": comic,
+                            "issues": {},
+                            "vols": {},
+                            "urls": {},
+                        }
+                    series_groups[norm]["issues"][
+                        int(issue) if issue.isdigit() else issue
+                    ] = year
+                    series_groups[norm]["urls"][
+                        int(issue) if issue.isdigit() else issue
+                    ] = url
+                else:
+                    series = re.sub(r"\s*\([^)]*\)", "", title).strip()
+                    series = re.sub(r"\.(cbz|cbr)$", "", series, flags=re.IGNORECASE)
+                    norm = utils.normalize_comic_name(series)
+                    if norm not in series_groups:
+                        series_groups[norm] = {
+                            "name": series,
+                            "issues": {},
+                            "vols": {},
+                            "urls": {},
+                        }
+                    series_groups[norm]["issues"]["Other"] = "Unknown"
+                    series_groups[norm]["urls"]["Other"] = url
+
+    if not series_groups:
+        print("No series found.")
+        input("Press Enter...")
+        return
+
+    active_series = {}
+    for norm, data in series_groups.items():
+        issues = [iss for iss in data["issues"].keys() if isinstance(iss, int)]
+        if issues:
+            active_series[norm] = data
+
+    if not active_series:
+        print("No series with downloadable issues found.")
+        input("Press Enter...")
+        return
+
+    clear()
+    print("Select a series to download:\n")
+    query_norm = utils.normalize_comic_name(query)
+
+    def get_sort_score(data):
+        name_norm = utils.normalize_comic_name(data["name"])
+        if name_norm == query_norm:
+            return (0, len(name_norm), data["name"])
+        elif name_norm.startswith(query_norm):
+            return (1, len(name_norm), data["name"])
+        return (2, len(name_norm), data["name"])
+
+    group_list = sorted(list(active_series.values()), key=get_sort_score)
+    for i, data in enumerate(group_list, 1):
+        name = data["name"]
+        issues = sorted([iss for iss in data["issues"].keys() if isinstance(iss, int)])
+        print(f"{i}. {name} ({len(issues)} issues (#{issues[0]}-{issues[-1]}))")
+
+    print("\nB = back")
+    choice = input("\nSelect: ").lower().strip()
+    if choice == "b":
+        return
+
+    try:
+        selected_series = group_list[int(choice) - 1]
+    except:
+        print("Invalid selection.")
+        input("Press Enter...")
+        return
+
+    comic = selected_series["name"]
+    rng = input(f"\nIssue range for '{comic}' (example 1-10): ").strip()
     if not re.fullmatch(r"[0-9]+-[0-9]+", rng):
         print("Invalid range.")
         input("Press Enter...")
@@ -203,36 +305,19 @@ def download_series(comic):
     existing_files = []
 
     def resolver():
-        needed_issues = []
-        for issue in range(start, end + 1):
-            existing = find_existing(indexes, comic=comic, issue=issue)
-            if not existing:
-                needed_issues.append(issue)
-
-        resolved_posts = {}
-        if needed_issues:
-            max_pages = 15
-            for page in range(1, max_pages + 1):
-                unresolved = [i for i in needed_issues if i not in resolved_posts]
-                if not unresolved:
-                    break
-                results = downloader.search(comic, page)
-                if not results:
-                    break
-                for title, url in results:
-                    for issue in list(unresolved):
-                        if utils.match_title_to_issue(title, comic, issue):
-                            resolved_posts[issue] = url
-                            unresolved.remove(issue)
-                            break
-
         for issue in range(start, end + 1):
             existing = find_existing(indexes, comic=comic, issue=issue)
             if existing:
                 existing_files.append((issue, existing))
                 next_issue_queue.put(("EXISTS", issue, existing))
                 continue
-            post = resolved_posts.get(issue)
+            post = selected_series["urls"].get(issue)
+            if not post:
+                for page in range(1, 6):
+                    results = downloader.search(f"{comic} #{issue}", page)
+                    post = utils.find_exact_issue(results, comic, issue)
+                    if post:
+                        break
             if not post:
                 next_issue_queue.put((None, issue, None))
                 continue

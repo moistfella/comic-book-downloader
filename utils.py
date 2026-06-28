@@ -24,16 +24,19 @@ def extract_year_from_text(text):
 def parse_comic_filename(filename):
     name = re.sub(r"\.(cbz|cbr)$", "", filename, flags=re.IGNORECASE)
     year = extract_year(name)
-    name = re.sub(r"\s*\(\d{4}\)\s*", "", name).strip(" -_")
-    name = re.sub(r"[-_]", " ", name).strip()
-    name = re.sub(r"\s+", " ", name)
-    numbers = list(re.finditer(r"\b(\d+)\b", name))
+    name_clean = re.sub(r"\s*\([^)]*\)", "", name).strip()
+    hash_match = re.search(r"#\s*(\d+)", name_clean)
+    if hash_match:
+        issue = hash_match.group(1)
+        series = name_clean[: hash_match.start()].strip(" -_–—:")
+        return series, issue, year or "Unknown"
+    numbers = list(re.finditer(r"\b(\d+)\b", name_clean))
     if not numbers:
         return None, None, None
     last = numbers[-1]
-    issue = str(int(last.group(1)))
-    title = name[: last.start()].strip()
-    return title, issue, year or "Unknown"
+    issue = str(int(last.group(0)))
+    series = name_clean[: last.start()].strip(" -_–—:")
+    return series, issue, year or "Unknown"
 
 
 def parse_volume_filename(filename):
