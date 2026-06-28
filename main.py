@@ -14,8 +14,10 @@ os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 if os.path.isfile(os.path.join(DOWNLOAD_DIR, "deleteme.txt")):
     os.remove(os.path.join(DOWNLOAD_DIR, "deleteme.txt"))
 
+
 def clear():
     subprocess.run("cls" if os.name == "nt" else "clear", shell=True)
+
 
 def build_indexes():
     named_index = {}
@@ -30,6 +32,7 @@ def build_indexes():
             named_index[(utils.normalize_comic_name(comic), str(issue))] = path
     return named_index, raw_index
 
+
 def add_file_to_indexes(indexes, path):
     named_index, raw_index = indexes
     base = os.path.basename(path)
@@ -38,6 +41,7 @@ def add_file_to_indexes(indexes, path):
     if comic and issue:
         named_index[(utils.normalize_comic_name(comic), str(issue))] = path
 
+
 def remove_file_from_indexes(indexes, path):
     named_index, raw_index = indexes
     base = os.path.basename(path)
@@ -45,6 +49,7 @@ def remove_file_from_indexes(indexes, path):
     comic, issue, _ = utils.parse_comic_filename(base)
     if comic and issue:
         named_index.pop((utils.normalize_comic_name(comic), str(issue)), None)
+
 
 def find_existing(indexes, raw_filename=None, comic=None, issue=None):
     named_index, raw_index = indexes
@@ -62,11 +67,13 @@ def find_existing(indexes, raw_filename=None, comic=None, issue=None):
             return existing
     return None
 
+
 def rename_file(path, comic, issue, year):
     new_name = f"{comic} #{issue} ({year}).cbz"
     new_path = os.path.join(DOWNLOAD_DIR, new_name)
     os.rename(path, new_path)
     return new_path
+
 
 def choose_result(query):
     page = 1
@@ -96,6 +103,7 @@ def choose_result(query):
             return results[index][0], results[index][1]
         except:
             pass
+
 
 def download_issue(query):
     indexes = build_indexes()
@@ -174,6 +182,7 @@ def download_issue(query):
                 add_file_to_indexes(indexes, path)
 
     input("\nDownload complete.\n\nPress Enter...")
+
 
 def download_series(comic):
     indexes = build_indexes()
@@ -299,7 +308,11 @@ def download_series(comic):
             if parsed_vol:
                 series, vol_num, subtitle, year = parsed_vol
                 if year == "Unknown":
-                    year = utils.extract_year_from_text(os.path.basename(path)) or last_year or "Unknown"
+                    year = (
+                        utils.extract_year_from_text(os.path.basename(path))
+                        or last_year
+                        or "Unknown"
+                    )
                 new_name = utils.format_volume_name(series, vol_num, subtitle, year)
                 new_path = os.path.join(DOWNLOAD_DIR, new_name)
                 remove_file_from_indexes(indexes, path)
@@ -307,9 +320,15 @@ def download_series(comic):
                 downloaded_files[i] = new_path
                 add_file_to_indexes(indexes, new_path)
             else:
-                comic_name, issue_num, year = utils.parse_comic_filename(os.path.basename(path))
+                comic_name, issue_num, year = utils.parse_comic_filename(
+                    os.path.basename(path)
+                )
                 if year == "Unknown":
-                    year = utils.extract_year_from_text(os.path.basename(path)) or last_year or "Unknown"
+                    year = (
+                        utils.extract_year_from_text(os.path.basename(path))
+                        or last_year
+                        or "Unknown"
+                    )
                 if comic_name:
                     remove_file_from_indexes(indexes, path)
                     new_path = rename_file(path, comic_name, issue_num, year)
@@ -317,6 +336,7 @@ def download_series(comic):
                     add_file_to_indexes(indexes, new_path)
 
     input("\nSeries complete.\n\nPress Enter...")
+
 
 def main():
     try:
@@ -340,6 +360,7 @@ def main():
                 download_series(comic)
     except KeyboardInterrupt:
         print("\n\nExiting...")
+
 
 if __name__ == "__main__":
     main()

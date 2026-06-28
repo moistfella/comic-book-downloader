@@ -1,10 +1,13 @@
 import re
 
+
 def clean(text):
     return re.sub(r"\s+", " ", text).strip()
 
+
 def normalize_comic_name(text):
     return re.sub(r"[^a-z0-9]+", "", text.lower())
+
 
 def extract_year(filename):
     match = re.search(r"\((\d{4})\)", filename)
@@ -12,9 +15,11 @@ def extract_year(filename):
         return match.group(1)
     return None
 
+
 def extract_year_from_text(text):
     match = re.search(r"\((\d{4})\)", text)
     return match.group(1) if match else None
+
 
 def parse_comic_filename(filename):
     name = re.sub(r"\.(cbz|cbr)$", "", filename, flags=re.IGNORECASE)
@@ -30,6 +35,7 @@ def parse_comic_filename(filename):
     title = name[: last.start()].strip()
     return title, issue, year or "Unknown"
 
+
 def parse_volume_filename(filename):
     name = re.sub(r"\.(cbz|cbr)$", "", filename, flags=re.IGNORECASE)
     year = extract_year(name) or "Unknown"
@@ -37,18 +43,20 @@ def parse_volume_filename(filename):
     if not vol_match:
         return None
     vol_num = str(int(vol_match.group(2)))
-    series_raw = name[:vol_match.start()].strip()
+    series_raw = name[: vol_match.start()].strip()
     series = re.sub(r"\s+", " ", series_raw).strip(" -_:")
-    post_raw = name[vol_match.end():].strip()
+    post_raw = name[vol_match.end() :].strip()
     post_clean = re.sub(r"\s*\([^)]*\)\s*", " ", post_raw).strip()
     subtitle = re.sub(r"^[^\w]+", "", post_clean).strip()
     subtitle = re.sub(r"\b(tpb)\b", "", subtitle, flags=re.IGNORECASE).strip(" -_:")
     return series, vol_num, re.sub(r"\s+", " ", subtitle), year
 
+
 def format_volume_name(series, vol_num, subtitle, year):
     if subtitle:
         return f"{series} Vol. {vol_num} - {subtitle} ({year}).cbz"
     return f"{series} Vol. {vol_num} ({year}).cbz"
+
 
 def match_title_to_issue(title, comic, issue):
     clean_comic = re.sub(r"^the\s+", "", comic.lower().strip())
@@ -71,6 +79,7 @@ def match_title_to_issue(title, comic, issue):
     if re.search(pattern, t):
         return True
     return False
+
 
 def find_exact_issue(results, comic, issue):
     for title, url in results:

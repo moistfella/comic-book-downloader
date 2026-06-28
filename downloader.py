@@ -11,6 +11,7 @@ HEADERS = {"User-Agent": "Mozilla/5.0"}
 session = requests.Session()
 session.headers.update(HEADERS)
 
+
 def search(query, page=1):
     url = f"{BASE_URL}/page/{page}/?s={quote_plus(query)}"
     r = session.get(url)
@@ -21,6 +22,7 @@ def search(query, page=1):
         if a:
             results.append((clean(a.text), a["href"]))
     return results
+
 
 def get_download_links(post):
     r = session.get(post)
@@ -36,6 +38,7 @@ def get_download_links(post):
             elif text in ("DOWNLOAD NOW", "DIRECT DOWNLOAD"):
                 primary_links.append(href)
     return mirror_links + primary_links
+
 
 def resolve_dlds(url):
     with sync_playwright() as p:
@@ -66,6 +69,7 @@ def resolve_dlds(url):
         browser.close()
         return real
 
+
 def download(url, download_dir):
     r = session.get(url, stream=True)
     filename = None
@@ -80,6 +84,7 @@ def download(url, download_dir):
     if not filename.endswith((".cbz", ".cbr")):
         filename += ".cbz"
     import os
+
     path = os.path.join(download_dir, filename)
     total = int(r.headers.get("content-length", 0))
     done = 0
