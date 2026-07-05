@@ -65,7 +65,7 @@ def match_title_to_issue(title, comic, issue):
     clean_comic = re.sub(r"^the\s+", "", comic.lower().strip())
     escaped_comic = re.escape(clean_comic)
     target_issue = str(int(issue))
-    pattern = rf"\b(?:the\s+)?{escaped_comic}\b\s*(?:#|–|-|_)?\s*0*{target_issue}\b"
+    pattern = rf"^(?:the\s+)?{escaped_comic}\b\s*(?:#|–|-|_)?\s*0*{target_issue}\b"
     banned = [
         "vol",
         "collection",
@@ -89,3 +89,20 @@ def find_exact_issue(results, comic, issue):
         if match_title_to_issue(title, comic, issue):
             return url
     return None
+
+
+def preprocess_search_query(query):
+    q = re.sub(r"([a-z0-9])([A-Z])", r"\1 \2", query)
+    lower = q.lower().strip()
+    words = {
+        "supersons": "super sons",
+        "spiderman": "spider man",
+        "ironman": "iron man",
+        "wonderwoman": "wonder woman",
+        "catwoman": "cat woman",
+        "xmen": "x-men",
+    }
+    for k, v in words.items():
+        if k in lower:
+            q = re.sub(rf"\b{k}\b", v, q, flags=re.IGNORECASE)
+    return q
