@@ -34,7 +34,7 @@ python3 -m playwright install
 ⚠️ **Arch Linux / CachyOS users:** Playwright browser binaries might be missing necessary system libraries. Please install system Chromium before running the tool: `sudo pacman -S chromium`
 
 ### 6. Running the Application
-Ensure your virtual environment is active, then launch the downloader using:
+Ensure your virtual environment is active  (step 2), then launch the downloader using:
 ```bash
 python3 main.py
 ```
