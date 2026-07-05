@@ -7,6 +7,7 @@ from urllib.parse import unquote
 
 import utils
 import downloader
+import requests
 
 DOWNLOAD_DIR = "downloads"
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
@@ -80,7 +81,15 @@ def choose_result(query):
     while True:
         clear()
         print("Loading results...")
-        results = downloader.search(query, page)
+        try:
+            results = downloader.search(query, page)
+        except requests.RequestException:
+            clear()
+            print(
+                "\nNetwork connection error. Please check your internet connection and try again."
+            )
+            input("\nPress Enter...")
+            return None, None
         clear()
         if not results:
             print("No results found.")
@@ -115,7 +124,14 @@ def download_issue(query):
     selected_title, post = choose_result(query)
     if not post:
         return
-    dlds_list = downloader.get_download_links(post)
+    try:
+        dlds_list = downloader.get_download_links(post)
+    except requests.RequestException:
+        print(
+            "\nNetwork connection error. Please check your internet connection and try again."
+        )
+        input("Press Enter...")
+        return
     if not dlds_list:
         print("No download link.")
         input("Press Enter...")
@@ -218,7 +234,14 @@ def download_series(query):
 
     series_groups = {}
     for page in range(1, 7):
-        results = downloader.search(query, page)
+        try:
+            results = downloader.search(query, page)
+        except requests.RequestException:
+            print(
+                "\nNetwork connection error. Please check your internet connection and try again."
+            )
+            input("Press Enter...")
+            return
         if not results:
             break
         for title, url in results:
@@ -347,7 +370,10 @@ def download_series(query):
                 post = selected_series["urls"].get(issue)
                 if not post:
                     for page in range(1, 6):
-                        results = downloader.search(f"{comic} #{issue}", page)
+                        try:
+                            results = downloader.search(f"{comic} #{issue}", page)
+                        except requests.RequestException:
+                            results = []
                         post = utils.find_exact_issue(results, comic, issue)
                         if post:
                             break
@@ -355,7 +381,10 @@ def download_series(query):
                     next_issue_queue.put((None, issue, None))
                     items_sent += 1
                     continue
-                dlds_list = downloader.get_download_links(post)
+                try:
+                    dlds_list = downloader.get_download_links(post)
+                except requests.RequestException:
+                    dlds_list = []
                 real = None
                 for dlds in dlds_list:
                     try:
