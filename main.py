@@ -84,6 +84,10 @@ def choose_result(query):
         clear()
         if not results:
             print("No results found.")
+            print(
+                "\nTip: If you searched with a combined name (like 'SuperSons' or 'supersons'), try adding spaces (like 'Super Sons')."
+            )
+            input("\nPress Enter...")
             return None, None
         print(f"Results for '{query}' (page {page})\n")
         for i, (title, _) in enumerate(results[:10], 1):
@@ -106,6 +110,7 @@ def choose_result(query):
 
 
 def download_issue(query):
+    query = utils.preprocess_search_query(query)
     indexes = build_indexes()
     selected_title, post = choose_result(query)
     if not post:
@@ -120,11 +125,28 @@ def download_issue(query):
 
     def resolver():
         real_url = None
-        for dlds in dlds_list:
-            real_url = downloader.resolve_dlds(dlds)
-            if real_url:
-                break
-        real_queue.put(real_url)
+        try:
+            for dlds in dlds_list:
+                try:
+                    real_url = downloader.resolve_dlds(dlds)
+                except Exception as e:
+                    import traceback
+
+                    err_msg = (
+                        f"\n[Error] Link resolution failed: {e}\n"
+                        f"If this issue persists, please submit an issue at:\n"
+                        f"https://github.com/moistfella/comic-book-downloader/issues"
+                    )
+                    print(err_msg)
+                    try:
+                        with open("error.log", "a") as f:
+                            f.write(f"--- ERROR: {e} ---\n{traceback.format_exc()}\n")
+                    except:
+                        pass
+                if real_url:
+                    break
+        finally:
+            real_queue.put(real_url)
 
     threading.Thread(target=resolver, daemon=True).start()
 
@@ -185,6 +207,7 @@ def download_issue(query):
 
 
 def download_series(query):
+    query = utils.preprocess_search_query(query)
     indexes = build_indexes()
     clear()
     print("Searching and grouping series...")
@@ -243,6 +266,9 @@ def download_series(query):
 
     if not series_groups:
         print("No series found.")
+        print(
+            "\nTip: If you searched with a combined name (like 'SuperSons' or 'supersons'), try adding spaces (like 'Super Sons')."
+        )
         input("Press Enter...")
         return
 
@@ -305,46 +331,78 @@ def download_series(query):
     existing_files = []
 
     def resolver():
-        for issue in range(start, end + 1):
-            existing = find_existing(indexes, comic=comic, issue=issue)
-            if existing:
-                existing_files.append((issue, existing))
-                next_issue_queue.put(("EXISTS", issue, existing))
-                continue
-            post = selected_series["urls"].get(issue)
-            if not post:
-                for page in range(1, 6):
-                    results = downloader.search(f"{comic} #{issue}", page)
-                    post = utils.find_exact_issue(results, comic, issue)
-                    if post:
+        items_sent = 0
+        try:
+            for issue in range(start, end + 1):
+                existing = find_existing(indexes, comic=comic, issue=issue)
+                if existing:
+                    existing_files.append((issue, existing))
+                    next_issue_queue.put(("EXISTS", issue, existing))
+                    items_sent += 1
+                    continue
+                post = selected_series["urls"].get(issue)
+                if not post:
+                    for page in range(1, 6):
+                        results = downloader.search(f"{comic} #{issue}", page)
+                        post = utils.find_exact_issue(results, comic, issue)
+                        if post:
+                            break
+                if not post:
+                    next_issue_queue.put((None, issue, None))
+                    items_sent += 1
+                    continue
+                dlds_list = downloader.get_download_links(post)
+                real = None
+                for dlds in dlds_list:
+                    try:
+                        real = downloader.resolve_dlds(dlds)
+                    except Exception as e:
+                        import traceback
+
+                        err_msg = (
+                            f"\n[Error] Link resolution failed: {e}\n"
+                            f"If this issue persists, please submit an issue at:\n"
+                            f"https://github.com/moistfella/comic-book-downloader/issues"
+                        )
+                        print(err_msg)
+                        try:
+                            with open("error.log", "a") as f:
+                                f.write(
+                                    f"--- ERROR: {e} ---\n{traceback.format_exc()}\n"
+                                )
+                        except:
+                            pass
+                    if real:
                         break
-            if not post:
-                next_issue_queue.put((None, issue, None))
-                continue
-            dlds_list = downloader.get_download_links(post)
-            real = None
-            for dlds in dlds_list:
-                real = downloader.resolve_dlds(dlds)
-                if real:
-                    break
-            if not real:
-                next_issue_queue.put((None, issue, None))
-                continue
-            raw_filename = re.sub(r'[:*?"<>|]', "", unquote(real.split("/")[-1]))
-            if not raw_filename.endswith((".cbz", ".cbr")):
-                raw_filename += ".cbz"
-            parsed_comic, parsed_issue, _ = utils.parse_comic_filename(raw_filename)
-            existing = find_existing(
-                indexes,
-                raw_filename=raw_filename,
-                comic=parsed_comic,
-                issue=parsed_issue,
-            )
-            if existing:
-                existing_files.append((issue, existing))
-                next_issue_queue.put(("EXISTS", issue, existing))
-                continue
-            next_issue_queue.put((real, issue, None))
+                if not real:
+                    next_issue_queue.put((None, issue, None))
+                    items_sent += 1
+                    continue
+                raw_filename = re.sub(r'[:*?"<>|]', "", unquote(real.split("/")[-1]))
+                if not raw_filename.endswith((".cbz", ".cbr")):
+                    raw_filename += ".cbz"
+                parsed_comic, parsed_issue, _ = utils.parse_comic_filename(raw_filename)
+                existing = find_existing(
+                    indexes,
+                    raw_filename=raw_filename,
+                    comic=parsed_comic,
+                    issue=parsed_issue,
+                )
+                if existing:
+                    existing_files.append((issue, existing))
+                    next_issue_queue.put(("EXISTS", issue, existing))
+                    items_sent += 1
+                    continue
+                next_issue_queue.put((real, issue, None))
+                items_sent += 1
+        finally:
+            expected = end - start + 1
+            while items_sent < expected:
+                try:
+                    next_issue_queue.put((None, start + items_sent, None))
+                except:
+                    pass
+                items_sent += 1
 
     threading.Thread(target=resolver, daemon=True).start()
 
