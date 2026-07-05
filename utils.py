@@ -35,6 +35,14 @@ def parse_comic_filename(filename):
         return None, None, None
     last = numbers[-1]
     issue = str(int(last.group(0)))
+    if len(issue) == 4 and (issue.startswith("19") or issue.startswith("20")):
+        if len(numbers) > 1:
+            last = numbers[-2]
+            issue = str(int(last.group(0)))
+            series = name_clean[: last.start()].strip(" -_–—:")
+            return series, issue, year or "Unknown"
+        else:
+            return None, None, None
     series = name_clean[: last.start()].strip(" -_–—:")
     return series, issue, year or "Unknown"
 
@@ -99,7 +107,6 @@ def preprocess_search_query(query):
         "spiderman": "spider man",
         "ironman": "iron man",
         "wonderwoman": "wonder woman",
-        "catwoman": "cat woman",
         "xmen": "x-men",
     }
     for k, v in words.items():
@@ -117,6 +124,6 @@ def sanitize_text(text):
             text = text.replace(username, "<USER>")
             text = text.replace(username.lower(), "<USER>")
             text = text.replace(username.upper(), "<USER>")
-    except:
+    except Exception:
         pass
     return text
