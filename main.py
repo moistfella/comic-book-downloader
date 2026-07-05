@@ -105,7 +105,7 @@ def choose_result(query):
         try:
             index = int(choice) - 1
             return results[index][0], results[index][1]
-        except:
+        except Exception:
             pass
 
 
@@ -145,7 +145,7 @@ def download_issue(query):
                                     f"--- ERROR: {e} ---\n{traceback.format_exc()}\n"
                                 )
                             )
-                    except:
+                    except Exception:
                         pass
                 if real_url:
                     break
@@ -312,7 +312,7 @@ def download_series(query):
 
     try:
         selected_series = group_list[int(choice) - 1]
-    except:
+    except Exception:
         print("Invalid selection.")
         input("Press Enter...")
         return
@@ -376,7 +376,7 @@ def download_series(query):
                                         f"--- ERROR: {e} ---\n{traceback.format_exc()}\n"
                                     )
                                 )
-                        except:
+                        except Exception:
                             pass
                     if real:
                         break
@@ -406,7 +406,7 @@ def download_series(query):
             while items_sent < expected:
                 try:
                     next_issue_queue.put((None, start + items_sent, None))
-                except:
+                except Exception:
                     pass
                 items_sent += 1
 
