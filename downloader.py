@@ -14,7 +14,7 @@ session.headers.update(HEADERS)
 
 def search(query, page=1):
     url = f"{BASE_URL}/page/{page}/?s={quote_plus(query)}"
-    r = session.get(url)
+    r = session.get(url, timeout=30)
     soup = BeautifulSoup(r.text, "html.parser")
     results = []
     for article in soup.select("article"):
@@ -25,7 +25,7 @@ def search(query, page=1):
 
 
 def get_download_links(post):
-    r = session.get(post)
+    r = session.get(post, timeout=30)
     soup = BeautifulSoup(r.text, "html.parser")
     primary_links = []
     mirror_links = []
@@ -100,7 +100,9 @@ def resolve_dlds(url):
 
 
 def download(url, download_dir):
-    r = session.get(url, stream=True)
+    import os
+
+    r = session.get(url, stream=True, timeout=30)
     filename = None
     cd = r.headers.get("content-disposition")
     if cd:
@@ -109,10 +111,10 @@ def download(url, download_dir):
             filename = unquote(match.group(1))
     if not filename:
         filename = unquote(url.split("/")[-1])
+    filename = os.path.basename(filename)
     filename = re.sub(r'[:*?"<>|]', "", filename)
     if not filename.endswith((".cbz", ".cbr")):
         filename += ".cbz"
-    import os
 
     path = os.path.join(download_dir, filename)
     total = int(r.headers.get("content-length", 0))
