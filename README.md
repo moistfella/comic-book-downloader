@@ -73,11 +73,8 @@ Choose the installation instructions corresponding to your operating system belo
    ./install.sh
    ```
    > `install.sh` automatically creates a Python virtual environment (`env`), activates it, installs the required dependencies (`requests`, `beautifulsoup4`, `playwright`), and initializes the Playwright browser binaries.
-   > 
-   > **Note for Arch Linux / CachyOS users:** Playwright browser binaries might be missing necessary system libraries. Please install system Chromium before running the tool:
-   > ```bash
-   > sudo pacman -S chromium
-   > ```
+
+   ⚠️ **Arch Linux / CachyOS users:** Playwright browser binaries might be missing necessary system libraries. Please install system Chromium before running the tool: `sudo pacman -S chromium`
 
 3. **Launch the Application:**
    ```bash
