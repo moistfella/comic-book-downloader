@@ -110,6 +110,7 @@ def preprocess_search_query(query):
 
 def sanitize_text(text):
     import getpass
+
     try:
         username = getpass.getuser()
         if username:

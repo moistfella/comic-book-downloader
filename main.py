@@ -140,7 +140,11 @@ def download_issue(query):
                     print(utils.sanitize_text(err_msg))
                     try:
                         with open("error.log", "a") as f:
-                            f.write(utils.sanitize_text(f"--- ERROR: {e} ---\n{traceback.format_exc()}\n"))
+                            f.write(
+                                utils.sanitize_text(
+                                    f"--- ERROR: {e} ---\n{traceback.format_exc()}\n"
+                                )
+                            )
                     except:
                         pass
                 if real_url:
@@ -368,7 +372,9 @@ def download_series(query):
                         try:
                             with open("error.log", "a") as f:
                                 f.write(
-                                    utils.sanitize_text(f"--- ERROR: {e} ---\n{traceback.format_exc()}\n")
+                                    utils.sanitize_text(
+                                        f"--- ERROR: {e} ---\n{traceback.format_exc()}\n"
+                                    )
                                 )
                         except:
                             pass
