@@ -33,7 +33,7 @@ def get_download_links(post):
         href = a["href"]
         text = clean(a.text).upper()
         if "/dls/" in href or "/dlds/" in href:
-            if any(m in text for m in ("PIXELDRAIN", "MEDIAFIRE", "ZIPPYSHARE")):
+            if any(m in text for m in ("PIXELDRAIN", "MEDIAFIRE")):
                 mirror_links.append(href)
             elif text in ("DOWNLOAD NOW", "DIRECT DOWNLOAD"):
                 primary_links.append(href)

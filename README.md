@@ -116,7 +116,7 @@ At the end of a download run, choose the rename option to standardize the files:
 > [!TIP]
 > You can press `Ctrl + C` at any time to safely exit the application.
 > 
-> *Note on Mirrors:* The scraper attempts to resolve multiple mirrors. If a download fails or times out, it is usually because the target hosting mirror (e.g., Zippyshare) has gone offline or the host server is unresponsive.
+> *Note on Mirrors:* The scraper attempts to resolve multiple mirrors. If a download fails or times out, it is usually because the target hosting mirror has gone offline or the host server is unresponsive.
 
 ---
 
