@@ -106,3 +106,16 @@ def preprocess_search_query(query):
         if k in lower:
             q = re.sub(rf"\b{k}\b", v, q, flags=re.IGNORECASE)
     return q
+
+
+def sanitize_text(text):
+    import getpass
+    try:
+        username = getpass.getuser()
+        if username:
+            text = text.replace(username, "<USER>")
+            text = text.replace(username.lower(), "<USER>")
+            text = text.replace(username.upper(), "<USER>")
+    except:
+        pass
+    return text

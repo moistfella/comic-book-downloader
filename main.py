@@ -137,10 +137,10 @@ def download_issue(query):
                         f"If this issue persists, please submit an issue at:\n"
                         f"https://github.com/moistfella/comic-book-downloader/issues"
                     )
-                    print(err_msg)
+                    print(utils.sanitize_text(err_msg))
                     try:
                         with open("error.log", "a") as f:
-                            f.write(f"--- ERROR: {e} ---\n{traceback.format_exc()}\n")
+                            f.write(utils.sanitize_text(f"--- ERROR: {e} ---\n{traceback.format_exc()}\n"))
                     except:
                         pass
                 if real_url:
@@ -364,11 +364,11 @@ def download_series(query):
                             f"If this issue persists, please submit an issue at:\n"
                             f"https://github.com/moistfella/comic-book-downloader/issues"
                         )
-                        print(err_msg)
+                        print(utils.sanitize_text(err_msg))
                         try:
                             with open("error.log", "a") as f:
                                 f.write(
-                                    f"--- ERROR: {e} ---\n{traceback.format_exc()}\n"
+                                    utils.sanitize_text(f"--- ERROR: {e} ---\n{traceback.format_exc()}\n")
                                 )
                         except:
                             pass
