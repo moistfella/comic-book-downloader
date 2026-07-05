@@ -93,7 +93,7 @@ def resolve_dlds(url):
                 page.wait_for_timeout(500)
             else:
                 page.wait_for_timeout(1000)
-        except:
+        except Exception:
             pass
         browser.close()
         return real
