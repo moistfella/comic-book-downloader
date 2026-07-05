@@ -41,8 +41,37 @@ def get_download_links(post):
 
 
 def resolve_dlds(url):
+    import shutil
+    import sys
+
+    launch_args = {"headless": True}
+    if sys.platform.startswith("linux"):
+        for binary in [
+            "chromium",
+            "chromium-browser",
+            "google-chrome",
+            "google-chrome-stable",
+            "brave-browser",
+            "brave",
+            "microsoft-edge",
+            "microsoft-edge-stable",
+            "opera",
+            "vivaldi",
+        ]:
+            path = shutil.which(binary)
+            if path:
+                launch_args["executable_path"] = path
+                break
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
+        try:
+            browser = p.chromium.launch(**launch_args)
+        except Exception as e:
+            raise RuntimeError(
+                f"Playwright failed to launch Chromium browser.\n"
+                f"If you are on Arch Linux or CachyOS, make sure you have a system browser installed:\n"
+                f"  sudo pacman -S chromium\n"
+                f"Original error: {e}"
+            ) from e
         context = browser.new_context(accept_downloads=True)
         page = context.new_page()
         real = None
