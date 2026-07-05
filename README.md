@@ -37,7 +37,7 @@ Supports single-issue downloads and automated series run downloads.
 Choose the installation instructions corresponding to your operating system below:
 
 ### 🪟 Windows Setup
-*(For manual installation steps, see [Manual Windows Installation](manual_install_windows.md))*
+*For manual installation steps, see [Manual Windows Installation](manual_install_windows.md)*
 
 1. **Clone the Repository:**
    ```bash
@@ -60,7 +60,7 @@ Choose the installation instructions corresponding to your operating system belo
 ---
 
 ### 🐧 Linux Setup
-*(For manual installation steps, see [Manual Linux Installation](manual_install_linux.md))*
+*For manual installation steps, see [Manual Linux Installation](manual_install_linux.md)*
 
 1. **Clone the Repository:**
    ```bash
