@@ -22,41 +22,6 @@ Supports single-issue downloads and automated series run downloads.
 
 ---
 
-## 🛠️ Architecture Workflow
-
-Here is how the downloader handles matching, redirection, and downloads:
-
-```mermaid
-graph TD
-    Start[Start Tool] --> Mode{Choose Mode}
-    Mode -->|1. Search Comic| SingleSearch[Search Comic Name]
-    SingleSearch --> SelectIssue[Select Issue from Search Results]
-    SelectIssue --> CheckExist1{Already Downloaded?}
-    CheckExist1 -->|Yes| Skip1[Skip & Inform User]
-    CheckExist1 -->|No| Resolve1[Resolve Link via Playwright]
-    
-    Mode -->|2. Search Series| SeriesSearch[Search Series & Enter Range]
-    SeriesSearch --> AutoMatch[Auto-Match Issues page-by-page]
-    AutoMatch --> CheckExist2{Already Downloaded?}
-    CheckExist2 -->|Yes| Skip2[Skip & Inform User]
-    CheckExist2 -->|No| Resolve2[Resolve Link via Playwright]
-    
-    Resolve1 --> Download1[Download with Progress]
-    Resolve2 --> Download2[Download with Progress]
-    
-    Download1 --> RenamePrompt{Rename file?}
-    RenamePrompt -->|Yes| RenameAction[Parse & Auto-Rename File]
-    RenamePrompt -->|No| End1[Complete]
-    RenameAction --> End1
-    
-    Download2 --> RenamePromptAll{Rename all files?}
-    RenamePromptAll -->|Yes| RenameActionAll[Parse & Auto-Rename Files]
-    RenamePromptAll -->|No| End2[Complete]
-    RenameActionAll --> End2
-```
-
----
-
 ## 📋 Requirements
 
 *   **Python:** Version `3.10` or higher is recommended (Download latest version [here](https://www.python.org/downloads/)).
@@ -106,6 +71,11 @@ Choose the installation instructions corresponding to your operating system belo
    ./install.sh
    ```
    > `install.sh` automatically creates a Python virtual environment (`env`), activates it, installs the required dependencies (`requests`, `beautifulsoup4`, `playwright`), and initializes the Playwright browser binaries.
+   > 
+   > **Note for Arch Linux / CachyOS users:** Playwright browser binaries might be missing necessary system libraries. Please install system Chromium before running the tool:
+   > ```bash
+   > sudo pacman -S chromium
+   > ```
 
 3. **Launch the Application:**
    ```bash
