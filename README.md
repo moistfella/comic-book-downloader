@@ -24,7 +24,9 @@ Supports single-issue downloads and automated series run downloads.
 
 ## 📋 Requirements
 
-*   **Python:** Version `3.10` or higher is recommended (Download latest version [here](https://www.python.org/downloads/)).
+*   **Python:** Version `3.10` or higher is recommended.
+
+    *   *Windows 10/11:* Download the latest version of Python [here](https://www.python.org/downloads/).
     *   *Ubuntu/Debian:* Ensure `python3-pip` and `python3-venv` are installed (`sudo apt install python3-pip python3-venv`).
     *   *Arch Linux/CachyOS:* Ensure `python-pip` is installed (`sudo pacman -S python-pip`).
 *   **Playwright:** Required for headless browser scraping to bypass JS download redirects.
