@@ -108,6 +108,16 @@ def preprocess_search_query(query):
         "ironman": "iron man",
         "wonderwoman": "wonder woman",
         "xmen": "x-men",
+        "spidergwen": "spider gwen",
+        "spiderwoman": "spider woman",
+        "greenlantern": "green lantern",
+        "greenarrow": "green arrow",
+        "ghostrider": "ghost rider",
+        "starwars": "star wars",
+        "blackpanther": "black panther",
+        "blackwidow": "black widow",
+        "captainamerica": "captain america",
+        "moonknight": "moon knight",
     }
     for k, v in words.items():
         if k in lower:
