@@ -195,7 +195,14 @@ def download_issue(query):
         return
 
     clear()
-    path = downloader.download(url, DOWNLOAD_DIR)
+    try:
+        path = downloader.download(url, DOWNLOAD_DIR)
+    except requests.RequestException:
+        print(
+            "\n[Error] Failed to download file. Please check your network connection and try again."
+        )
+        input("\nPress Enter...")
+        return
     add_file_to_indexes(indexes, path)
 
     clear()
@@ -207,7 +214,7 @@ def download_issue(query):
         if parsed_vol:
             series, vol_num, subtitle, year = parsed_vol
             if year == "Unknown":
-                year = utils.extract_year_from_text(selected_title) or "Unknown"
+                year = utils.extract_year(selected_title) or "Unknown"
             new_name = utils.format_volume_name(series, vol_num, subtitle, year)
             new_path = os.path.join(DOWNLOAD_DIR, new_name)
             remove_file_from_indexes(indexes, path)
@@ -217,7 +224,7 @@ def download_issue(query):
         else:
             comic, issue, year = utils.parse_comic_filename(os.path.basename(path))
             if year == "Unknown":
-                year = utils.extract_year_from_text(selected_title) or "Unknown"
+                year = utils.extract_year(selected_title) or "Unknown"
             if comic:
                 remove_file_from_indexes(indexes, path)
                 path = rename_file(path, comic, issue, year)
@@ -461,7 +468,13 @@ def download_series(query):
             continue
 
         print(f"\nDownloading issue #{issue}...")
-        path = downloader.download(url, DOWNLOAD_DIR)
+        try:
+            path = downloader.download(url, DOWNLOAD_DIR)
+        except requests.RequestException:
+            print(
+                f"\n[Error] Failed to download issue #{issue}. Please check your network connection and try again."
+            )
+            continue
         downloaded_files.append(path)
         add_file_to_indexes(indexes, path)
 
@@ -487,7 +500,7 @@ def download_series(query):
                 series, vol_num, subtitle, year = parsed_vol
                 if year == "Unknown":
                     year = (
-                        utils.extract_year_from_text(os.path.basename(path))
+                        utils.extract_year(os.path.basename(path))
                         or last_year
                         or "Unknown"
                     )
@@ -503,7 +516,7 @@ def download_series(query):
                 )
                 if year == "Unknown":
                     year = (
-                        utils.extract_year_from_text(os.path.basename(path))
+                        utils.extract_year(os.path.basename(path))
                         or last_year
                         or "Unknown"
                     )
