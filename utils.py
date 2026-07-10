@@ -16,11 +16,6 @@ def extract_year(filename):
     return None
 
 
-def extract_year_from_text(text):
-    match = re.search(r"\((\d{4})\)", text)
-    return match.group(1) if match else None
-
-
 def parse_comic_filename(filename):
     name = re.sub(r"\.(cbz|cbr)$", "", filename, flags=re.IGNORECASE)
     year = extract_year(name)
@@ -85,7 +80,8 @@ def match_title_to_issue(title, comic, issue):
         "w.i.p",
     ]
     t = title.lower()
-    if any(b in t for b in banned):
+    banned_pattern = rf"\b(?:{'|'.join(re.escape(b) for b in banned)})\b"
+    if re.search(banned_pattern, t):
         return False
     if re.search(pattern, t):
         return True
