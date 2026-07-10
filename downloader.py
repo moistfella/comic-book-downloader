@@ -103,6 +103,7 @@ def download(url, download_dir):
     import os
 
     r = session.get(url, stream=True, timeout=30)
+    r.raise_for_status()
     filename = None
     cd = r.headers.get("content-disposition")
     if cd:
