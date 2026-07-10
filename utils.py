@@ -132,7 +132,6 @@ def preprocess_search_query(query):
         "doctorstrange": "doctor strange",
         "doctordoom": "doctor doom",
         "ironfist": "iron fist",
-        "ironheart": "iron heart",
         "lukecage": "luke cage",
         "antman": "ant man",
         "msmarvel": "ms marvel",
