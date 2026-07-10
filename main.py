@@ -516,6 +516,15 @@ def download_series(query):
     input("\nSeries complete.\n\nPress Enter...")
 
 
+def show_settings():
+    clear()
+    print("Settings\n")
+    print(
+        "This page is a placeholder for future settings and currently is useless, check back in another update!\n"
+    )
+    input("Press Enter to return to the main menu...")
+
+
 def main():
     try:
         while True:
@@ -524,7 +533,7 @@ def main():
             option = input(
                 "\nWhat are you looking for?\n1. Search comic\n2. Search Series\n\nChoice (1/2): "
             ).strip()
-            if not option or option not in ("1", "2"):
+            if not option or option not in ("1", "2", "0"):
                 print("Invalid choice. Must be either option 1 or 2.")
                 input("Press Enter to continue...")
                 continue
@@ -536,6 +545,8 @@ def main():
                     "\nWhat is the name of the comic series you want to download?: "
                 )
                 download_series(comic)
+            elif option == "0":
+                show_settings()
     except KeyboardInterrupt:
         print("\n\nExiting...")
 
