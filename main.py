@@ -72,7 +72,7 @@ def find_existing(indexes, raw_filename=None, comic=None, issue=None):
 def rename_file(path, comic, issue, year):
     new_name = f"{comic} #{issue} ({year}).cbz"
     new_path = os.path.join(DOWNLOAD_DIR, new_name)
-    os.rename(path, new_path)
+    os.replace(path, new_path)
     return new_path
 
 
@@ -218,7 +218,7 @@ def download_issue(query):
             new_name = utils.format_volume_name(series, vol_num, subtitle, year)
             new_path = os.path.join(DOWNLOAD_DIR, new_name)
             remove_file_from_indexes(indexes, path)
-            os.rename(path, new_path)
+            os.replace(path, new_path)
             path = new_path
             add_file_to_indexes(indexes, path)
         else:
@@ -507,7 +507,7 @@ def download_series(query):
                 new_name = utils.format_volume_name(series, vol_num, subtitle, year)
                 new_path = os.path.join(DOWNLOAD_DIR, new_name)
                 remove_file_from_indexes(indexes, path)
-                os.rename(path, new_path)
+                os.replace(path, new_path)
                 downloaded_files[i] = new_path
                 add_file_to_indexes(indexes, new_path)
             else:
