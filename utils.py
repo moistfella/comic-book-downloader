@@ -25,7 +25,8 @@ def parse_comic_filename(filename):
         issue = hash_match.group(1)
         series = name_clean[: hash_match.start()].strip(" -_–—:")
         return series, issue, year or "Unknown"
-    numbers = list(re.finditer(r"\b(\d+)\b", name_clean))
+    search_clean = name_clean.replace("_", " ")
+    numbers = list(re.finditer(r"\b(\d+)\b", search_clean))
     if not numbers:
         return None, None, None
     last = numbers[-1]
