@@ -1,4 +1,5 @@
 import re
+import time
 import requests
 from bs4 import BeautifulSoup
 from urllib.parse import quote_plus, unquote
@@ -120,7 +121,7 @@ def download(url, download_dir):
     path = os.path.join(download_dir, filename)
     total = int(r.headers.get("content-length", 0))
     done = 0
-    last_percent = -1
+    start_time = time.time()
     print(f"Downloading: {filename}")
     with open(path, "wb") as f:
         for chunk in r.iter_content(1024 * 256):
@@ -129,8 +130,15 @@ def download(url, download_dir):
                 done += len(chunk)
                 if total:
                     percent = int(done * 100 / total)
-                    if percent != last_percent:
-                        print(f"\r{percent}% ", end="")
-                        last_percent = percent
+                    elapsed = time.time() - start_time
+                    speed = (done / (1024 * 1024)) / elapsed if elapsed > 0 else 0
+                    speed_str = f"{int(speed)}" if speed >= 1 else f"{speed:.1f}"
+                    remaining = total - done
+                    eta = int(remaining / (speed * 1024 * 1024)) if speed > 0 else 0
+                    print(
+                        f"\r{percent}% complete - {speed_str} MB/s - {eta} seconds remaining   ",
+                        end="",
+                        flush=True,
+                    )
     print("\nSaved ->", path, "\n")
     return path
