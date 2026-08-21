@@ -193,3 +193,28 @@ def check_for_updates():
     except Exception:
         pass
     return False
+
+
+def load_config():
+    import json
+    import os
+
+    config_path = "config.json"
+    default_config = {"check_updates": True}
+    if os.path.exists(config_path):
+        try:
+            with open(config_path, "r", encoding="utf-8") as f:
+                return {**default_config, **json.load(f)}
+        except Exception:
+            pass
+    return default_config
+
+
+def save_config(config):
+    import json
+
+    try:
+        with open("config.json", "w", encoding="utf-8") as f:
+            json.dump(config, f, indent=4)
+    except Exception:
+        pass

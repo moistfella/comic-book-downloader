@@ -530,12 +530,19 @@ def download_series(query):
 
 
 def show_settings():
-    clear()
-    print("Settings\n")
-    print(
-        "This page is a placeholder for future settings and currently is useless, check back in another update!\n"
-    )
-    input("Press Enter to return to the main menu...")
+    while True:
+        clear()
+        config = utils.load_config()
+        status = "Enabled" if config.get("check_updates", True) else "Disabled"
+        print("Settings\n")
+        print(f"1. Check for updates on startup: {status}")
+        print("\nB = Back to main menu")
+        choice = input("\nChoice: ").strip().lower()
+        if choice == "1":
+            config["check_updates"] = not config.get("check_updates", True)
+            utils.save_config(config)
+        elif choice == "b":
+            break
 
 
 update_available = False
@@ -543,6 +550,9 @@ update_available = False
 
 def check_updates_worker():
     global update_available
+    config = utils.load_config()
+    if not config.get("check_updates", True):
+        return
     if utils.check_for_updates():
         update_available = True
 
