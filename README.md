@@ -87,6 +87,8 @@ Choose the installation instructions corresponding to your operating system belo
    ./run.sh
    ```
 
+   > **Updating:** You can run `git pull` from the repository directory at any time to pull the latest code updates from GitHub.
+
 ---
 
 ## 📖 Usage Instructions
