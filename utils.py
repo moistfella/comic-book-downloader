@@ -164,3 +164,32 @@ def sanitize_text(text):
     except Exception:
         pass
     return text
+
+
+def check_for_updates():
+    import subprocess
+    import requests
+
+    try:
+        res = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            capture_output=True,
+            text=True,
+            timeout=3,
+        )
+        local_sha = res.stdout.strip()
+        if not local_sha:
+            return False
+
+        r = requests.get(
+            "https://api.github.com/repos/moistfella/comic-book-downloader/commits/main",
+            headers={"User-Agent": "Mozilla/5.0"},
+            timeout=5,
+        )
+        if r.status_code == 200:
+            remote_sha = r.json().get("sha", "")
+            if remote_sha and remote_sha != local_sha:
+                return True
+    except Exception:
+        pass
+    return False

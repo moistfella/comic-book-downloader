@@ -538,11 +538,24 @@ def show_settings():
     input("Press Enter to return to the main menu...")
 
 
+update_available = False
+
+
+def check_updates_worker():
+    global update_available
+    if utils.check_for_updates():
+        update_available = True
+
+
 def main():
     try:
         while True:
             clear()
             print("Welcome\nPress Ctrl+C at any time to exit")
+            if update_available:
+                print(
+                    "\n* A new update is available! Run update-windows.bat to update."
+                )
             option = input(
                 "\nWhat are you looking for?\n1. Search comic\n2. Search Series\n\nChoice (1/2): "
             ).strip()
@@ -565,4 +578,5 @@ def main():
 
 
 if __name__ == "__main__":
+    threading.Thread(target=check_updates_worker, daemon=True).start()
     main()
