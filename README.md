@@ -59,6 +59,8 @@ Choose the installation instructions corresponding to your operating system belo
    run.bat
    ```
 
+   > **Updating:** You can run `update-windows.bat` at any time to pull the latest code updates from GitHub.
+
 ---
 
 ### 🐧 Linux Setup
