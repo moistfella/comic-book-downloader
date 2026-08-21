@@ -563,9 +563,12 @@ def main():
             clear()
             print("Welcome\nPress Ctrl+C at any time to exit")
             if update_available:
-                print(
-                    "\n* A new update is available! Run update-windows.bat to update."
-                )
+                if os.name == "nt":
+                    print(
+                        "\n* A new update is available! Run update-windows.bat to update."
+                    )
+                else:
+                    print("\n* A new update is available! Run 'git pull' to update.")
             option = input(
                 "\nWhat are you looking for?\n1. Search comic\n2. Search Series\n\nChoice (1/2): "
             ).strip()
