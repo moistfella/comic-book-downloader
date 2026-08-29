@@ -98,13 +98,13 @@ def find_exact_issue(results, comic, issue):
 
 def preprocess_search_query(query):
     q = re.sub(r"([a-z0-9])([A-Z])", r"\1 \2", query)
-    lower = q.lower().strip()
     words = {
         "supersons": "super sons",
         "spiderman": "spider man",
         "ironman": "iron man",
         "wonderwoman": "wonder woman",
         "xmen": "x-men",
+        "x men": "x-men",
         "spidergwen": "spider gwen",
         "spiderwoman": "spider woman",
         "greenlantern": "green lantern",
@@ -138,6 +138,7 @@ def preprocess_search_query(query):
         "newmutants": "new mutants",
         "starlord": "star lord",
         "wintersolider": "winter soldier",
+        "winter solider": "winter soldier",
         "wintersoldier": "winter soldier",
         "falconandwintersoldier": "falcon and winter soldier",
         "judgedredd": "judge dredd",
@@ -147,8 +148,7 @@ def preprocess_search_query(query):
         "dr strange": "doctor strange",
     }
     for k, v in words.items():
-        if k in lower:
-            q = re.sub(rf"\b{k}\b", v, q, flags=re.IGNORECASE)
+        q = re.sub(rf"\b{re.escape(k)}\b", v, q, flags=re.IGNORECASE)
     return q
 
 
