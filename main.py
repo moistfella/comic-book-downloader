@@ -601,5 +601,7 @@ def main():
 
 
 if __name__ == "__main__":
-    threading.Thread(target=check_updates_worker, daemon=True).start()
+    updater_thread = threading.Thread(target=check_updates_worker, daemon=True)
+    updater_thread.start()
+    updater_thread.join(timeout=1.0)
     main()
