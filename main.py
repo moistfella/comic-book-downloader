@@ -119,6 +119,8 @@ def choose_result(query):
 
 
 def download_issue(query):
+    if not query:
+        return
     query = utils.preprocess_search_query(query)
     indexes = build_indexes()
     selected_title, post = choose_result(query)
@@ -234,6 +236,8 @@ def download_issue(query):
 
 
 def download_series(query):
+    if not query:
+        return
     query = utils.preprocess_search_query(query)
     indexes = build_indexes()
     clear()
@@ -577,12 +581,18 @@ def main():
                 input("Press Enter to continue...")
                 continue
             if option == "1":
-                comic = input("\nWhat is the name of the comic you want to download?: ")
+                comic = input(
+                    "\nWhat is the name of the comic you want to download?: "
+                ).strip()
+                if not comic:
+                    continue
                 download_issue(comic)
             elif option == "2":
                 comic = input(
                     "\nWhat is the name of the comic series you want to download?: "
-                )
+                ).strip()
+                if not comic:
+                    continue
                 download_series(comic)
             elif option == "0":
                 show_settings()
