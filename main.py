@@ -570,9 +570,13 @@ def main():
             print("Welcome\nPress Ctrl+C at any time to exit")
             if update_available:
                 if not skipped_update:
-                    ans = input(
-                        "\n* A new update is available! Would you like to update now? (y/n): "
-                    ).strip().lower()
+                    ans = (
+                        input(
+                            "\n* A new update is available! Would you like to update now? (y/n): "
+                        )
+                        .strip()
+                        .lower()
+                    )
                     if ans == "y":
                         cmd = (
                             ["cmd.exe", "/c", "update-windows.bat"]
