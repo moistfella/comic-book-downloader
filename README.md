@@ -75,7 +75,7 @@ Choose the installation instructions corresponding to your operating system belo
 2. **Run the Installer:**
    Grant execute permissions and run the install script from the terminal:
    ```bash
-   chmod +x install.sh run.sh
+   chmod +x install.sh run.sh update-linux.sh
    ./install.sh
    ```
    > `install.sh` automatically creates a Python virtual environment (`env`), activates it, installs the required dependencies (`requests`, `beautifulsoup4`, `playwright`), and initializes the Playwright browser binaries.
@@ -87,7 +87,7 @@ Choose the installation instructions corresponding to your operating system belo
    ./run.sh
    ```
 
-   > **Updating:** You can run `git pull` from the repository directory at any time to pull the latest code updates from GitHub.
+   > **Updating:** You can run `./update-linux.sh` (or `git pull`) at any time to pull the latest code updates from GitHub.
 
 ---
 
