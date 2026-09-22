@@ -1,4 +1,5 @@
 import os
+import sys
 import subprocess
 import re
 import threading
@@ -562,11 +563,28 @@ def check_updates_worker():
 
 
 def main():
+    skipped_update = False
     try:
         while True:
             clear()
             print("Welcome\nPress Ctrl+C at any time to exit")
             if update_available:
+                if not skipped_update:
+                    ans = input(
+                        "\n* A new update is available! Would you like to update now? (y/n): "
+                    ).strip().lower()
+                    if ans == "y":
+                        cmd = (
+                            ["cmd.exe", "/c", "update-windows.bat"]
+                            if os.name == "nt"
+                            else ["bash", "update-linux.sh"]
+                        )
+                        subprocess.run(cmd)
+                        os.execl(sys.executable, sys.executable, *sys.argv)
+                    else:
+                        skipped_update = True
+                        clear()
+                        print("Welcome\nPress Ctrl+C at any time to exit")
                 if os.name == "nt":
                     print(
                         "\n* A new update is available! Run update-windows.bat to update."
