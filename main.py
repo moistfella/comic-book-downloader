@@ -93,6 +93,11 @@ def choose_result(query):
             return None, None
         clear()
         if not results:
+            if page > 1:
+                page -= 1
+                print("\nNo more pages.")
+                input("\nPress Enter...")
+                continue
             print("No results found.")
             print(
                 "\nTip: If you searched with a combined name (like 'SuperSons' or 'supersons'), try adding spaces (like 'Super Sons')."
@@ -100,21 +105,24 @@ def choose_result(query):
             input("\nPress Enter...")
             return None, None
         print(f"Results for '{query}' (page {page})\n")
-        for i, (title, _) in enumerate(results[:10], 1):
+        displayed = results[:10]
+        for i, (title, _) in enumerate(displayed, 1):
             print(f"{i}. {title}")
         print("\nN = next page | P = previous page | B = back")
         choice = input("\nSelect: ").lower().strip()
         if choice == "n":
             page += 1
             continue
-        if choice == "p" and page > 1:
-            page -= 1
+        if choice == "p":
+            if page > 1:
+                page -= 1
             continue
         if choice == "b":
             return None, None
         try:
             index = int(choice) - 1
-            return results[index][0], results[index][1]
+            if 0 <= index < len(displayed):
+                return displayed[index][0], displayed[index][1]
         except Exception:
             pass
 
