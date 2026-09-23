@@ -158,7 +158,7 @@ def download_issue(query):
                     )
                     print(utils.sanitize_text(err_msg))
                     try:
-                        with open("error.log", "a") as f:
+                        with open("error.log", "a", encoding="utf-8") as f:
                             f.write(
                                 utils.sanitize_text(
                                     f"--- ERROR: {e} ---\n{traceback.format_exc()}\n"
@@ -411,7 +411,7 @@ def download_series(query):
                         )
                         print(utils.sanitize_text(err_msg))
                         try:
-                            with open("error.log", "a") as f:
+                            with open("error.log", "a", encoding="utf-8") as f:
                                 f.write(
                                     utils.sanitize_text(
                                         f"--- ERROR: {e} ---\n{traceback.format_exc()}\n"
