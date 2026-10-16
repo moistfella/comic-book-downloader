@@ -31,7 +31,9 @@ def build_indexes():
         raw_index[file.lower()] = path
         comic, issue, _ = utils.parse_comic_filename(file)
         if comic and issue:
-            named_index[(utils.normalize_comic_name(comic), str(issue))] = path
+            named_index[
+                (utils.normalize_comic_name(comic), utils.normalize_issue(issue))
+            ] = path
     return named_index, raw_index
 
 
@@ -41,7 +43,9 @@ def add_file_to_indexes(indexes, path):
     raw_index[base.lower()] = path
     comic, issue, _ = utils.parse_comic_filename(base)
     if comic and issue:
-        named_index[(utils.normalize_comic_name(comic), str(issue))] = path
+        named_index[
+            (utils.normalize_comic_name(comic), utils.normalize_issue(issue))
+        ] = path
 
 
 def remove_file_from_indexes(indexes, path):
@@ -50,7 +54,9 @@ def remove_file_from_indexes(indexes, path):
     raw_index.pop(base.lower(), None)
     comic, issue, _ = utils.parse_comic_filename(base)
     if comic and issue:
-        named_index.pop((utils.normalize_comic_name(comic), str(issue)), None)
+        named_index.pop(
+            (utils.normalize_comic_name(comic), utils.normalize_issue(issue)), None
+        )
 
 
 def find_existing(indexes, raw_filename=None, comic=None, issue=None):
@@ -62,8 +68,8 @@ def find_existing(indexes, raw_filename=None, comic=None, issue=None):
         raw_path = os.path.join(DOWNLOAD_DIR, raw_filename)
         if os.path.exists(raw_path):
             return raw_path
-    if comic and issue:
-        key = (utils.normalize_comic_name(comic), str(issue))
+    if comic and issue is not None:
+        key = (utils.normalize_comic_name(comic), utils.normalize_issue(issue))
         existing = named_index.get(key)
         if existing and os.path.exists(existing):
             return existing
@@ -71,7 +77,7 @@ def find_existing(indexes, raw_filename=None, comic=None, issue=None):
 
 
 def rename_file(path, comic, issue, year):
-    new_name = f"{comic} #{issue} ({year}).cbz"
+    new_name = f"{comic} #{utils.normalize_issue(issue)} ({year}).cbz"
     new_path = os.path.join(DOWNLOAD_DIR, new_name)
     os.replace(path, new_path)
     return new_path

@@ -9,6 +9,13 @@ def normalize_comic_name(text):
     return re.sub(r"[^a-z0-9]+", "", text.lower())
 
 
+def normalize_issue(issue):
+    if issue is None:
+        return None
+    s = str(issue).strip()
+    return str(int(s)) if s.isdigit() else s
+
+
 def extract_year(filename):
     match = re.search(r"\((\d{4})\)", filename)
     if match:
@@ -22,7 +29,7 @@ def parse_comic_filename(filename):
     name_clean = re.sub(r"\s*\([^)]*\)", "", name).strip()
     hash_match = re.search(r"#\s*(\d+)", name_clean)
     if hash_match:
-        issue = hash_match.group(1)
+        issue = normalize_issue(hash_match.group(1))
         series = name_clean[: hash_match.start()].strip(" -_–—:")
         return series, issue, year or "Unknown"
     search_clean = name_clean.replace("_", " ")
