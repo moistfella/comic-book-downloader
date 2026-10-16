@@ -254,6 +254,7 @@ def download_series(query):
     if not query:
         return
     query = utils.preprocess_search_query(query)
+    ignore_packs = utils.load_config().get("ignore_packs", True)
     indexes = build_indexes()
     clear()
     print("Searching and grouping series...")
@@ -287,7 +288,9 @@ def download_series(query):
                 ] = year
                 series_groups[norm]["urls"][f"V{vol_num}"] = url
             else:
-                comic, issue, year = utils.parse_comic_filename(title)
+                comic, issue, year = utils.parse_comic_filename(
+                    title, ignore_packs=ignore_packs
+                )
                 if comic and issue:
                     norm = utils.normalize_comic_name(comic)
                     if norm not in series_groups:
@@ -400,7 +403,9 @@ def download_series(query):
                             results = downloader.search(f"{comic} #{issue}", page)
                         except requests.RequestException:
                             results = []
-                        post = utils.find_exact_issue(results, comic, issue)
+                        post = utils.find_exact_issue(
+                            results, comic, issue, ignore_packs=ignore_packs
+                        )
                         if post:
                             break
                 if not post:
@@ -442,7 +447,9 @@ def download_series(query):
                 raw_filename = re.sub(r'[:*?"<>|]', "", unquote(real.split("/")[-1]))
                 if not raw_filename.endswith((".cbz", ".cbr")):
                     raw_filename += ".cbz"
-                parsed_comic, parsed_issue, _ = utils.parse_comic_filename(raw_filename)
+                parsed_comic, parsed_issue, _ = utils.parse_comic_filename(
+                    raw_filename, ignore_packs=ignore_packs
+                )
                 existing = find_existing(
                     indexes,
                     raw_filename=raw_filename,
@@ -531,7 +538,7 @@ def download_series(query):
                 add_file_to_indexes(indexes, new_path)
             else:
                 comic_name, issue_num, year = utils.parse_comic_filename(
-                    os.path.basename(path)
+                    os.path.basename(path), ignore_packs=ignore_packs
                 )
                 if year == "Unknown":
                     year = (
@@ -553,12 +560,17 @@ def show_settings():
         clear()
         config = utils.load_config()
         status = "Enabled" if config.get("check_updates", True) else "Disabled"
+        packs_status = "Enabled" if config.get("ignore_packs", True) else "Disabled"
         print("Settings\n")
         print(f"1. Check for updates on startup: {status}")
+        print(f"2. Ignore multi-issue packs: {packs_status}")
         print("\nB = Back to main menu")
         choice = input("\nChoice: ").strip().lower()
         if choice == "1":
             config["check_updates"] = not config.get("check_updates", True)
+            utils.save_config(config)
+        elif choice == "2":
+            config["ignore_packs"] = not config.get("ignore_packs", True)
             utils.save_config(config)
         elif choice == "b":
             break

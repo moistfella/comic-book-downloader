@@ -23,12 +23,18 @@ def extract_year(filename):
     return None
 
 
-def parse_comic_filename(filename):
+def parse_comic_filename(filename, ignore_packs=True):
     name = re.sub(r"\.(cbz|cbr)$", "", filename, flags=re.IGNORECASE)
     year = extract_year(name)
     name_clean = re.sub(r"\s*\([^)]*\)", "", name).strip()
     hash_match = re.search(r"#\s*(\d+)", name_clean)
     if hash_match:
+        if ignore_packs and re.match(
+            r"\s*(?:[-–—]|to\b)\s*#?\s*\d+",
+            name_clean[hash_match.end() :],
+            re.IGNORECASE,
+        ):
+            return None, None, None
         issue = normalize_issue(hash_match.group(1))
         series = name_clean[: hash_match.start()].strip(" -_–—:")
         return series, issue, year or "Unknown"
@@ -36,16 +42,27 @@ def parse_comic_filename(filename):
     numbers = list(re.finditer(r"\b(\d+)\b", search_clean))
     if not numbers:
         return None, None, None
-    last = numbers[-1]
+    idx = len(numbers) - 1
+    last = numbers[idx]
     issue = str(int(last.group(0)))
     if len(issue) == 4 and (issue.startswith("19") or issue.startswith("20")):
         if len(numbers) > 1:
-            last = numbers[-2]
+            idx -= 1
+            last = numbers[idx]
             issue = str(int(last.group(0)))
-            series = name_clean[: last.start()].strip(" -_–—:")
-            return series, issue, year or "Unknown"
         else:
             return None, None, None
+    if idx > 0:
+        prev = numbers[idx - 1]
+        if re.fullmatch(
+            r"\s*(?:[-–—]|to)\s*",
+            search_clean[prev.end() : last.start()],
+            re.IGNORECASE,
+        ) and int(prev.group(0)) < int(last.group(0)):
+            if ignore_packs:
+                return None, None, None
+            last = prev
+            issue = str(int(last.group(0)))
     series = name_clean[: last.start()].strip(" -_–—:")
     return series, issue, year or "Unknown"
 
@@ -72,11 +89,13 @@ def format_volume_name(series, vol_num, subtitle, year):
     return f"{series} Vol. {vol_num} ({year}).cbz"
 
 
-def match_title_to_issue(title, comic, issue):
+def match_title_to_issue(title, comic, issue, ignore_packs=True):
     clean_comic = re.sub(r"^the\s+", "", comic.lower().strip())
     escaped_comic = re.escape(clean_comic)
     target_issue = str(int(issue))
     pattern = rf"^(?:the\s+)?{escaped_comic}\b\s*(?:#|–|-|_)?\s*0*{target_issue}\b"
+    if ignore_packs:
+        pattern += r"(?!\s*(?:[-–—]|to\b)\s*#?\s*\d)"
     banned = [
         "vol",
         "collection",
@@ -96,9 +115,9 @@ def match_title_to_issue(title, comic, issue):
     return False
 
 
-def find_exact_issue(results, comic, issue):
+def find_exact_issue(results, comic, issue, ignore_packs=True):
     for title, url in results:
-        if match_title_to_issue(title, comic, issue):
+        if match_title_to_issue(title, comic, issue, ignore_packs=ignore_packs):
             return url
     return None
 
@@ -207,7 +226,7 @@ def load_config():
     import os
 
     config_path = "config.json"
-    default_config = {"check_updates": True}
+    default_config = {"check_updates": True, "ignore_packs": True}
     if os.path.exists(config_path):
         try:
             with open(config_path, "r", encoding="utf-8") as f:
