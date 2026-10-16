@@ -29,11 +29,13 @@ def build_indexes():
             continue
         path = os.path.join(DOWNLOAD_DIR, file)
         raw_index[file.lower()] = path
-        comic, issue, _ = utils.parse_comic_filename(file)
+        comic, issue, year = utils.parse_comic_filename(file)
         if comic and issue:
-            named_index[
-                (utils.normalize_comic_name(comic), utils.normalize_issue(issue))
-            ] = path
+            norm_comic = utils.normalize_comic_name(comic)
+            norm_issue = utils.normalize_issue(issue)
+            named_index[(norm_comic, norm_issue)] = path
+            if year and year != "Unknown":
+                named_index[(norm_comic, norm_issue, year)] = path
     return named_index, raw_index
 
 
@@ -41,25 +43,29 @@ def add_file_to_indexes(indexes, path):
     named_index, raw_index = indexes
     base = os.path.basename(path)
     raw_index[base.lower()] = path
-    comic, issue, _ = utils.parse_comic_filename(base)
+    comic, issue, year = utils.parse_comic_filename(base)
     if comic and issue:
-        named_index[
-            (utils.normalize_comic_name(comic), utils.normalize_issue(issue))
-        ] = path
+        norm_comic = utils.normalize_comic_name(comic)
+        norm_issue = utils.normalize_issue(issue)
+        named_index[(norm_comic, norm_issue)] = path
+        if year and year != "Unknown":
+            named_index[(norm_comic, norm_issue, year)] = path
 
 
 def remove_file_from_indexes(indexes, path):
     named_index, raw_index = indexes
     base = os.path.basename(path)
     raw_index.pop(base.lower(), None)
-    comic, issue, _ = utils.parse_comic_filename(base)
+    comic, issue, year = utils.parse_comic_filename(base)
     if comic and issue:
-        named_index.pop(
-            (utils.normalize_comic_name(comic), utils.normalize_issue(issue)), None
-        )
+        norm_comic = utils.normalize_comic_name(comic)
+        norm_issue = utils.normalize_issue(issue)
+        named_index.pop((norm_comic, norm_issue), None)
+        if year and year != "Unknown":
+            named_index.pop((norm_comic, norm_issue, year), None)
 
 
-def find_existing(indexes, raw_filename=None, comic=None, issue=None):
+def find_existing(indexes, raw_filename=None, comic=None, issue=None, year=None):
     named_index, raw_index = indexes
     if raw_filename:
         raw_path = raw_index.get(raw_filename.lower())
@@ -69,7 +75,21 @@ def find_existing(indexes, raw_filename=None, comic=None, issue=None):
         if os.path.exists(raw_path):
             return raw_path
     if comic and issue is not None:
-        key = (utils.normalize_comic_name(comic), utils.normalize_issue(issue))
+        norm_comic = utils.normalize_comic_name(comic)
+        norm_issue = utils.normalize_issue(issue)
+        if year and year != "Unknown":
+            existing = named_index.get((norm_comic, norm_issue, str(year)))
+            if existing and os.path.exists(existing):
+                return existing
+            existing = named_index.get((norm_comic, norm_issue))
+            if existing and os.path.exists(existing):
+                _, _, existing_year = utils.parse_comic_filename(
+                    os.path.basename(existing)
+                )
+                if not existing_year or existing_year == "Unknown":
+                    return existing
+            return None
+        key = (norm_comic, norm_issue)
         existing = named_index.get(key)
         if existing and os.path.exists(existing):
             return existing
@@ -199,11 +219,17 @@ def download_issue(query):
     raw_filename = re.sub(r'[:*?"<>|]', "", unquote(url.split("/")[-1]))
     if not raw_filename.endswith((".cbz", ".cbr")):
         raw_filename += ".cbz"
-    parsed_comic, parsed_issue, _ = utils.parse_comic_filename(raw_filename)
+    parsed_comic, parsed_issue, parsed_year = utils.parse_comic_filename(raw_filename)
+    if parsed_year == "Unknown":
+        parsed_year = utils.extract_year(selected_title) or "Unknown"
 
     print("Checking existing files...\n")
     existing = find_existing(
-        indexes, raw_filename=raw_filename, comic=parsed_comic, issue=parsed_issue
+        indexes,
+        raw_filename=raw_filename,
+        comic=parsed_comic,
+        issue=parsed_issue,
+        year=parsed_year,
     )
     if existing:
         print(f"Found: {os.path.basename(existing)}")
@@ -293,17 +319,19 @@ def download_series(query):
                 )
                 if comic and issue:
                     norm = utils.normalize_comic_name(comic)
-                    if norm not in series_groups:
-                        series_groups[norm] = {
+                    group_key = f"{norm}_{year}" if year and year != "Unknown" else norm
+                    if group_key not in series_groups:
+                        series_groups[group_key] = {
                             "name": comic,
+                            "year": year,
                             "issues": {},
                             "vols": {},
                             "urls": {},
                         }
-                    series_groups[norm]["issues"][
+                    series_groups[group_key]["issues"][
                         int(issue) if issue.isdigit() else issue
                     ] = year
-                    series_groups[norm]["urls"][
+                    series_groups[group_key]["urls"][
                         int(issue) if issue.isdigit() else issue
                     ] = url
                 else:
@@ -354,8 +382,12 @@ def download_series(query):
     group_list = sorted(list(active_series.values()), key=get_sort_score)
     for i, data in enumerate(group_list, 1):
         name = data["name"]
+        year = data.get("year")
+        year_str = f" ({year})" if year and year != "Unknown" else ""
         issues = sorted([iss for iss in data["issues"].keys() if isinstance(iss, int)])
-        print(f"{i}. {name} ({len(issues)} issues (#{issues[0]}-{issues[-1]}))")
+        print(
+            f"{i}. {name}{year_str} ({len(issues)} issues (#{issues[0]}-{issues[-1]}))"
+        )
 
     print("\nB = back")
     choice = input("\nSelect: ").lower().strip()
@@ -370,6 +402,7 @@ def download_series(query):
         return
 
     comic = selected_series["name"]
+    series_year = selected_series.get("year")
     rng = input(f"\nIssue range for '{comic}' (example 1-10): ").strip()
     if not re.fullmatch(r"[0-9]+-[0-9]+", rng):
         print("Invalid range.")
@@ -383,14 +416,16 @@ def download_series(query):
 
     next_issue_queue = Queue(maxsize=1)
     downloaded_files = []
-    last_year = None
+    last_year = series_year if series_year and series_year != "Unknown" else None
     existing_files = []
 
     def resolver():
         items_sent = 0
         try:
             for issue in range(start, end + 1):
-                existing = find_existing(indexes, comic=comic, issue=issue)
+                existing = find_existing(
+                    indexes, comic=comic, issue=issue, year=series_year
+                )
                 if existing:
                     existing_files.append((issue, existing))
                     next_issue_queue.put(("EXISTS", issue, existing))
@@ -404,7 +439,11 @@ def download_series(query):
                         except requests.RequestException:
                             results = []
                         post = utils.find_exact_issue(
-                            results, comic, issue, ignore_packs=ignore_packs
+                            results,
+                            comic,
+                            issue,
+                            ignore_packs=ignore_packs,
+                            year=series_year,
                         )
                         if post:
                             break
@@ -447,7 +486,7 @@ def download_series(query):
                 raw_filename = re.sub(r'[:*?"<>|]', "", unquote(real.split("/")[-1]))
                 if not raw_filename.endswith((".cbz", ".cbr")):
                     raw_filename += ".cbz"
-                parsed_comic, parsed_issue, _ = utils.parse_comic_filename(
+                parsed_comic, parsed_issue, parsed_year = utils.parse_comic_filename(
                     raw_filename, ignore_packs=ignore_packs
                 )
                 existing = find_existing(
@@ -455,6 +494,7 @@ def download_series(query):
                     raw_filename=raw_filename,
                     comic=parsed_comic,
                     issue=parsed_issue,
+                    year=parsed_year if parsed_year != "Unknown" else series_year,
                 )
                 if existing:
                     existing_files.append((issue, existing))

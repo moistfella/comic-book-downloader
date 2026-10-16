@@ -115,7 +115,13 @@ def match_title_to_issue(title, comic, issue, ignore_packs=True):
     return False
 
 
-def find_exact_issue(results, comic, issue, ignore_packs=True):
+def find_exact_issue(results, comic, issue, ignore_packs=True, year=None):
+    if year and year != "Unknown":
+        for title, url in results:
+            if extract_year(title) == str(year) and match_title_to_issue(
+                title, comic, issue, ignore_packs=ignore_packs
+            ):
+                return url
     for title, url in results:
         if match_title_to_issue(title, comic, issue, ignore_packs=ignore_packs):
             return url
