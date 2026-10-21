@@ -26,9 +26,9 @@ pip install -r requirements.txt
 ```
 
 ### 5. Install Playwright Browsers
-Initialize the Chromium browser binaries required for the scraper to run:
+Initialize the Chromium browser binary required for the scraper to run:
 ```bash
-python3 -m playwright install
+python3 -m playwright install chromium
 ```
 
 ⚠️ **Arch Linux / CachyOS users:** Playwright browser binaries might be missing necessary system libraries. Please install system Chromium before running the tool: `sudo pacman -S chromium`
