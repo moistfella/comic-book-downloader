@@ -1,4 +1,7 @@
+import os
 import re
+import shutil
+import sys
 import time
 import requests
 from bs4 import BeautifulSoup
@@ -42,8 +45,32 @@ def get_download_links(post):
 
 
 def resolve_dlds(url):
-    import shutil
-    import sys
+    try:
+        with session.get(url, stream=True, timeout=15) as r:
+            final_url = r.url
+            ct = r.headers.get("content-type", "").lower()
+            cd = r.headers.get("content-disposition", "").lower()
+            if "pixeldrain.com/u/" in final_url:
+                file_id = final_url.rstrip("/").split("/")[-1]
+                return f"https://pixeldrain.com/api/file/{file_id}"
+            if (
+                "attachment" in cd
+                or any(
+                    t in ct
+                    for t in (
+                        "application/octet-stream",
+                        "application/x-cb",
+                        "application/zip",
+                        "application/vnd.rar",
+                    )
+                )
+                or final_url.lower()
+                .split("?")[0]
+                .endswith((".cbz", ".cbr", ".zip", ".rar"))
+            ):
+                return final_url
+    except Exception:
+        pass
 
     launch_args = {"headless": True}
     if sys.platform.startswith("linux"):
@@ -64,15 +91,41 @@ def resolve_dlds(url):
                 launch_args["executable_path"] = path
                 break
     with sync_playwright() as p:
-        try:
-            browser = p.chromium.launch(**launch_args)
-        except Exception as e:
+        browser = None
+        last_err = None
+        candidates = [launch_args]
+        for ch in ("msedge", "chrome"):
+            candidates.append({"headless": True, "channel": ch})
+        if sys.platform == "win32":
+            roots = [
+                os.environ.get("PROGRAMFILES", ""),
+                os.environ.get("PROGRAMFILES(X86)", ""),
+                os.environ.get("LOCALAPPDATA", ""),
+            ]
+            rel_paths = [
+                r"Google\Chrome\Application\chrome.exe",
+                r"Microsoft\Edge\Application\msedge.exe",
+                r"BraveSoftware\Brave-Browser\Application\brave.exe",
+            ]
+            for root in roots:
+                for rel in rel_paths:
+                    exe = os.path.join(root, rel)
+                    if root and os.path.isfile(exe):
+                        candidates.append({"headless": True, "executable_path": exe})
+        for args in candidates:
+            try:
+                browser = p.chromium.launch(**args)
+                break
+            except Exception as e:
+                last_err = e
+        if not browser:
             raise RuntimeError(
                 f"Playwright failed to launch Chromium browser.\n"
+                f"Try running: python -m playwright install chromium\n"
                 f"If you are on Arch Linux or CachyOS, make sure you have a system browser installed:\n"
                 f"  sudo pacman -S chromium\n"
-                f"Original error: {e}"
-            ) from e
+                f"Original error: {last_err}"
+            ) from last_err
         context = browser.new_context(accept_downloads=True)
         page = context.new_page()
         real = None
@@ -101,8 +154,6 @@ def resolve_dlds(url):
 
 
 def download(url, download_dir):
-    import os
-
     r = session.get(url, stream=True, timeout=30)
     r.raise_for_status()
     filename = None
