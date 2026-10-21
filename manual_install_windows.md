@@ -14,10 +14,11 @@ pip install -r requirements.txt
 ```
 
 ### 3. Install Playwright Browsers
-Initialize the Chromium browser binaries required for the scraper to run:
+Initialize the Chromium browser binary required for the scraper to run:
 ```cmd
-python -m playwright install
+python -m playwright install chromium
 ```
+*(Note: If the download times out on a slow connection, the downloader will automatically fall back to using an installed system browser such as Microsoft Edge, Google Chrome, or Brave.)*
 
 ### 4. Running the Application
 Once installation is complete, you can launch the downloader using:
